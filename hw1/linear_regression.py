@@ -44,7 +44,8 @@ def get_raw(csv):
     data = data.replace('NR', 0)
     del data['測站']
     data = data.unstack(level=0).swaplevel(0, 1, 1).sort_index(1, 0)
-    data = data.convert_objects(convert_numeric=True)
+    data = data.apply(pd.to_numeric)
+    data.to_csv('tmp.csv')
     pm25 = data.loc['PM2.5'].as_matrix()
     # data = data.loc['PM2.5'].as_matrix().reshape(-1, 1)
     data = data.as_matrix().T
@@ -54,9 +55,9 @@ def get_raw(csv):
 
 def split_valid(pm25, data, ratio):
     print('raw data.shape:', data.shape)
-    days = int(20 * 24 * ratio)
-    train_inds = np.where(np.arange(data.shape[0]) % (20 * 24) >= days)
-    valid_inds = np.where(np.arange(data.shape[0]) % (20 * 24) < days)
+    days = int(23 * 24 * ratio)
+    train_inds = np.where(np.arange(data.shape[0]) % (23 * 24) >= days)
+    valid_inds = np.where(np.arange(data.shape[0]) % (23 * 24) < days)
     train = {'x': data[train_inds], 'y': pm25[train_inds]}
     valid = {'x': data[valid_inds], 'y': pm25[valid_inds]}
     return train, valid
@@ -86,10 +87,13 @@ def transform(x):
 
 
 def get_test_data(csv):
-    data = pd.read_csv(csv, encoding='big5', index_col=[0,1], parse_dates=True, header=None)
-    data = data.replace('NR', 0)        
-    data = data.unstack(level=0).swaplevel(0, 1, 1).sort_index(1, 0)
+    data = pd.read_csv(csv, encoding='big5', parse_dates=True, header=None)
+    data = data.replace('NR', 0)
+    data = data.replace('id_', '', regex=True)
+    data[0] = data[0].apply(pd.to_numeric)
+    data = data.set_index([0, 1])    
     data = data.apply(pd.to_numeric)
+    data = data.unstack(level=0).swaplevel(0, 1, 1).sort_index(1, 0)
     x = data.as_matrix().T
     x = x.reshape(int(x.shape[0] / 9), -1)
     return x
