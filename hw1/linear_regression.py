@@ -14,18 +14,20 @@ class LinearRegressor:
 
     def fit_analytics(self, x, y):
         x = np.append(x, np.ones((x.shape[0], 1)), axis=1)
-        self.w = np.dot(np.dot(np.linalg.inv(np.dot(x.T, x)), x.T), y)
+        self.w = np.dot(np.dot(np.linalg.inv(np.dot(x.T, x) + np.identity(x.shape[1]) * self.l), x.T), y)
+        # print(self.w)
         
     def fit(self, x, y, x_, y_):        
-        self.w = np.random.random((x.shape[1] + 1, 1))
         x = np.append(x, np.ones((x.shape[0], 1)), axis=1)
-        y = y.reshape(-1, 1)
-        dw = 2 * np.dot(x.T, np.dot(x, self.w) - y) / x.shape[0] + self.l * self.w
+        # y = y.reshape(-1, 1)
+        self.w = np.random.random((x.shape[1],))
+        # self.w = np.dot(np.dot(np.linalg.inv(np.dot(x.T, x)), x.T), y)
+        dw = 2 * np.dot(x.T, np.dot(x, self.w) - y) / x.shape[0] + 2 * self.l * self.w
         while np.linalg.norm(dw) > self.stop:
             self.w -= dw * self.rate
             predict = np.dot(x, self.w)
             # print('err:', np.linalg.norm(predict - y) / x.shape[0], rmse(predict, y))
-            # print('err valid:', rmse(self.predict(x_), y_))
+            print('err valid:', rmse(self.predict(x_), y_))
             print('|dw|:', np.linalg.norm(dw))
             # print('dw:' ,dw)
             dw = 2 * np.dot(x.T, (np.dot(x, self.w) - y)) / x.shape[0] + self.l * self.w
@@ -33,7 +35,6 @@ class LinearRegressor:
             
     def predict(self, x):
         x = np.append(x, np.ones((x.shape[0], 1)), axis=1)
-        # print(self.w)
         return np.dot(x , self.w)
 
 
@@ -71,9 +72,17 @@ def scan(n_prev, data):
             end = m * (n_hours - n_prev) + h + n_prev
             x[start] = data['x'][start:end].reshape(1, -1)
             y[start] = data['y'][end]            
-
+            
     # print('x', x)
     return {'x': x, 'y': y}
+
+
+def transform(x):
+    n_features = 18
+    ind_pm25s = 9 + n_features * np.arange(int(x.shape[1] / n_features))
+    std_pm25 = np.std(x[:,ind_pm25s], axis=1).reshape(-1, 1)
+    x_ = np.append(x, std_pm25, axis=1)
+    return x_
 
 
 def get_test_data(csv):
@@ -104,18 +113,23 @@ def main():
     parser.add_argument('--l', type=float, help='ratio of validation data', default=0.1)
     parser.add_argument('--stop', type=float, help='ratio of validation data', default=1)
     parser.add_argument('--rate', type=float, help='ratio of validation data', default=1e-5)
-    parser.add_argument('--n_prev', type=float, help='', default=9)
+    parser.add_argument('--n_prev', type=int, help='', default=9)
     args = parser.parse_args()
 
     pm25, raw_data = get_raw(args.train)
+    # raw_data = (raw_data - np.average(raw_data, axis=0)) / np.std(raw_data, axis=0)
     train, valid = split_valid(pm25, raw_data, args.valid_ratio)
     train = scan(args.n_prev, train)
     valid = scan(args.n_prev, valid)
 
+    train['x'] = transform(train['x'])
+    valid['x'] = transform(valid['x'])
+    
     regressor = LinearRegressor(l=args.l, stop=args.stop, rate=args.rate)
     # regressor.fit(train['x'], train['y'], valid['x'], valid['y'])
     regressor.fit_analytics(train['x'], train['y'])
     
+    print('train size =', train['x'].shape)
     print('e in', rmse(regressor.predict(train['x']), train['y']))
     print('valid rmse:', rmse(regressor.predict(valid['x']), valid['y']))
 
