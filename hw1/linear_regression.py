@@ -55,9 +55,9 @@ def get_raw(csv):
 
 def split_valid(pm25, data, ratio):
     print('raw data.shape:', data.shape)
-    days = int(23 * 24 * ratio)
-    train_inds = np.where(np.arange(data.shape[0]) % (23 * 24) >= days)
-    valid_inds = np.where(np.arange(data.shape[0]) % (23 * 24) < days)
+    days = int(20 * 24 * (1 - ratio))
+    train_inds = np.where(np.arange(data.shape[0]) % (20 * 24) <= days)[0]
+    valid_inds = np.where(np.arange(data.shape[0]) % (20 * 24) > days)[0]
     train = {'x': data[train_inds], 'y': pm25[train_inds]}
     valid = {'x': data[valid_inds], 'y': pm25[valid_inds]}
     return train, valid
@@ -126,8 +126,13 @@ def main():
     train = scan(args.n_prev, train)
     valid = scan(args.n_prev, valid)
 
-    train['x'] = transform(train['x'])
-    valid['x'] = transform(valid['x'])
+    # train['x'] = transform(train['x'])
+    # valid['x'] = transform(valid['x'])
+
+    # n_features = 18
+    # train['x'] = np.concatenate((train['x'], valid['x'][:,n_features:]), axis=0)
+    # train['y'] = np.concatenate((train['y'], valid['x'][:,-9]), axis=0)
+    # valid['x'] = valid['x'][:,n_features:]
     
     regressor = LinearRegressor(l=args.l, stop=args.stop, rate=args.rate)
     # regressor.fit(train['x'], train['y'], valid['x'], valid['y'])
