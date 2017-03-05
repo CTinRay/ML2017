@@ -134,29 +134,33 @@ def main():
     parser.add_argument('--rate', type=float, help='ratio of validation data', default=1e-5)
     parser.add_argument('--n_prev', type=int, help='', default=9)
     args = parser.parse_args()
-
+    
     pm25, raw_data = get_raw(args.train)
     # raw_data = (raw_data - np.average(raw_data, axis=0)) / np.std(raw_data, axis=0)
     train, valid = split_valid(pm25, raw_data, args.valid_ratio)
-    train = scan(args.n_prev - 1, train)
-    valid = scan(args.n_prev, valid)
-
+    valid = scan(9, valid)
+    # valid['x'] = transform(valid['x'])
+    ys_ = np.zeros((valid['x'].shape[0], 6))
     n_features = 18
-    train['x'] = np.concatenate((train['x'], valid['x'][:,n_features:]), axis=0)
-    train['y'] = np.concatenate((train['y'], valid['x'][:,-9]), axis=0)
-    valid['x'] = valid['x'][:,n_features:]
-
-    train['x'] = transform(train['x'])
-    valid['x'] = transform(valid['x'])
     
+    for n_prev in range(4, 10):
+        print('n_prev:', n_prev)
+        train_ = scan(n_prev, train)
+        regressor = LinearRegressor(l=args.l, stop=args.stop, rate=args.rate)
+        # regressor.fit(train['x'], train['y'], valid['x'], valid['y'])
+        # train_['x'] = transform(train_['x'])
+        regressor.fit_analytics(train_['x'], train_['y'])
+        ys_[:,n_prev - 4] = regressor.predict(valid['x'][:,-n_prev * n_features:])
+        # print('train size =', train['x'].shape)
+        # print('e in', rmse(regressor.predict(train['x']), train['y']))
+        # print('valid rmse:', rmse(regressor.predict(valid['x']), valid['y']))
+
     regressor = LinearRegressor(l=args.l, stop=args.stop, rate=args.rate)
-    # regressor.fit(train['x'], train['y'], valid['x'], valid['y'])
-    regressor.fit_analytics(train['x'], train['y'])
+    regressor.fit_analytics(ys_, valid['y'])
+    # print('e in', rmse(regressor.predict(ys_train), train['y']))
+    print('valid rmse:', rmse(regressor.predict(ys_), valid['y']))
     
-    print('train size =', train['x'].shape)
-    print('e in', rmse(regressor.predict(train['x']), train['y']))
-    print('valid rmse:', rmse(regressor.predict(valid['x']), valid['y']))
-
+        
     train, _ = split_valid(pm25, raw_data, args.valid_ratio)
     train = scan(args.n_prev, train)
     regressor.fit_analytics(train['x'], train['y'])
