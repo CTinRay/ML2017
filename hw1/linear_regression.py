@@ -121,7 +121,7 @@ def write_csv(path, data):
         f.write('id_%d,%f\n' % (i, data[i]))
     
     f.close()
-    
+
         
 def main():
     parser = argparse.ArgumentParser(description='ML HW1')    
@@ -137,34 +137,42 @@ def main():
     
     pm25, raw_data = get_raw(args.train)
     # raw_data = (raw_data - np.average(raw_data, axis=0)) / np.std(raw_data, axis=0)
-    train, valid = split_valid(pm25, raw_data, args.valid_ratio)
-    valid = scan(9, valid)
+    train_raw, valid_raw = split_valid(pm25, raw_data, args.valid_ratio)
+    train = scan(9, train_raw)
+    valid = scan(9, valid_raw)
     # valid['x'] = transform(valid['x'])
-    ys_ = np.zeros((valid['x'].shape[0], 6))
     n_features = 18
-    
-    for n_prev in range(4, 10):
-        print('n_prev:', n_prev)
-        train_ = scan(n_prev, train)
-        regressor = LinearRegressor(l=args.l, stop=args.stop, rate=args.rate)
-        # regressor.fit(train['x'], train['y'], valid['x'], valid['y'])
-        # train_['x'] = transform(train_['x'])
-        regressor.fit_analytics(train_['x'], train_['y'])
-        ys_[:,n_prev - 4] = regressor.predict(valid['x'][:,-n_prev * n_features:])
-        # print('train size =', train['x'].shape)
-        # print('e in', rmse(regressor.predict(train['x']), train['y']))
-        # print('valid rmse:', rmse(regressor.predict(valid['x']), valid['y']))
 
-    regressor = LinearRegressor(l=args.l, stop=args.stop, rate=args.rate)
-    regressor.fit_analytics(ys_, valid['y'])
-    # print('e in', rmse(regressor.predict(ys_train), train['y']))
-    print('valid rmse:', rmse(regressor.predict(ys_), valid['y']))
+    regressors = [0] * 9
+    train['ys'] = np.zeros((train['x'].shape[0], 9))
+    for n_prev in range(1, 10):
+        print('n_prev:', n_prev)
+        train_ = scan(n_prev, train_raw)
+        regressors[n_prev - 1] = LinearRegressor(l=args.l, stop=args.stop, rate=args.rate)
+        regressors[n_prev - 1].fit_analytics(train_['x'], train_['y'])
+        train['ys'][:,n_prev - 1] = regressors[n_prev - 1].predict(train['x'][:,-n_prev * n_features:])
     
+    regressor = LinearRegressor(l=args.l, stop=args.stop, rate=args.rate)
+    # regressor.fit_analytics(train['ys'], train['y'])
+    # print('w', regressor.w)
+    # train['y_'] = regressor.predict(train['ys'])
+    # print('ein =', rmse(train['y_'], train['y']))
+    
+    if args.valid_ratio > 0:
+        valid['ys'] = np.zeros((valid['x'].shape[0], 9))
+        for n_prev in range(1, 10):
+            valid['ys'][:,n_prev - 1] = regressors[n_prev - 1].predict(valid['x'][:,-n_prev * n_features:])
+
+        regressor.fit_analytics(valid['ys'], valid['y'])
+        print('valid rmse:', rmse(regressor.predict(valid['ys']), valid['y']))
+
         
-    train, _ = split_valid(pm25, raw_data, args.valid_ratio)
-    train = scan(args.n_prev, train)
-    regressor.fit_analytics(train['x'], train['y'])
-    test_y = regressor.predict(get_test_data(args.test))
+    test_x = get_test_data(args.test)
+    test_y_ = np.zeros((test_x.shape[0], 9))
+    for n_prev in range(1, 10):
+        test_y_[:,n_prev - 1] = regressors[n_prev - 1].predict(test_x[:,-n_prev * n_features:])    
+        
+    test_y = regressor.predict(test_y_)
     write_csv(args.out, test_y)
     
 if __name__ == '__main__':
