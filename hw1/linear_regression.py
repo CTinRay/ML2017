@@ -55,9 +55,9 @@ def get_raw(csv):
 
 def split_valid(pm25, data, ratio):
     print('raw data.shape:', data.shape)
-    days = int(23 * 24 * ratio)
-    train_inds = np.where(np.arange(data.shape[0]) % (23 * 24) >= days)
-    valid_inds = np.where(np.arange(data.shape[0]) % (23 * 24) < days)
+    days = int(20 * 24 * ratio)
+    train_inds = np.where(np.arange(data.shape[0]) % (20 * 24) >= days)
+    valid_inds = np.where(np.arange(data.shape[0]) % (20 * 24) < days)
     train = {'x': data[train_inds], 'y': pm25[train_inds]}
     valid = {'x': data[valid_inds], 'y': pm25[valid_inds]}
     return train, valid
