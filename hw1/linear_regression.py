@@ -1,6 +1,7 @@
 import argparse
 import numpy as np
 import pandas as pd
+import math
 
 def rmse(y_, y):
     return (np.average((y_ - y) ** 2)) ** 0.5
@@ -76,12 +77,26 @@ def scan(n_prev, data):
     # print('x', x)
     return {'x': x, 'y': y}
 
+def angle2abs(angle):
+    x = np.cos(2 * math.pi * angle / 360)
+    y = np.sin(2 * math.pi * angle / 360)
+    return x, y
+
 
 def transform(x):
     n_features = 18
-    ind_pm25s = 9 + n_features * np.arange(int(x.shape[1] / n_features))
-    std_pm25 = np.std(x[:,ind_pm25s], axis=1).reshape(-1, 1)
-    x_ = np.append(x, std_pm25, axis=1)
+    ind_base = n_features * np.arange(int(x.shape[1] / n_features))
+    # std_pm25 = np.std(x[:,ind_pm25s], axis=1).reshape(-1, 1)
+    # x_ = np.append(x, std_pm25, axis=1)
+    # ind_wind = np.append(ind_base + 15, ind_base + 16)
+    ind_wind = ind_base + 15
+    xs, ys = angle2abs(x[:,ind_wind])
+    x_ = np.array(x)
+    x_ = np.concatenate((x, xs, ys), axis=1)
+    ind_wind = np.append(ind_base + 15, ind_base + 16)    
+    np.delete(x_, ind_wind, axis=1)
+    
+    # return x[:,np.concatenate((ind_base + 9, ind_base + 8, ind_base + 10))]
     return x_
 
 
@@ -126,8 +141,8 @@ def main():
     train = scan(args.n_prev, train)
     valid = scan(args.n_prev, valid)
 
-    # train['x'] = transform(train['x'])
-    # valid['x'] = transform(valid['x'])
+    train['x'] = transform(train['x'])
+    valid['x'] = transform(valid['x'])
     
     regressor = LinearRegressor(l=args.l, stop=args.stop, rate=args.rate)
     # regressor.fit(train['x'], train['y'], valid['x'], valid['y'])
