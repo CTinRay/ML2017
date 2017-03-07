@@ -108,6 +108,7 @@ def write_csv(path, data):
     
         
 def main():
+    n_features = 18
     parser = argparse.ArgumentParser(description='ML HW1')    
     parser.add_argument('train', type=str, help='training data')
     parser.add_argument('test', type=str, help='testing data')
@@ -139,7 +140,8 @@ def main():
     train, _ = split_valid(pm25, raw_data, 0)
     train = scan(args.n_prev, train)
     regressor.fit_analytics(train['x'], train['y'])
-    test_y = regressor.predict(get_test_data(args.test))
+    test_x = get_test_data(args.test)[:,- args.n_prev * n_features:]
+    test_y = regressor.predict(test_x)
     write_csv(args.out, test_y)
     
 if __name__ == '__main__':
