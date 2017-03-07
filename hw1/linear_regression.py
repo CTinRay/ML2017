@@ -14,8 +14,7 @@ class LinearRegressor:
 
     def fit_analytics(self, x, y):
         x = np.append(x, np.ones((x.shape[0], 1)), axis=1)
-        self.w = np.dot(np.dot(np.linalg.inv(np.dot(x.T, x) + np.identity(x.shape[1]) * self.l), x.T), y)
-        # print(self.w)
+        self.w = np.dot(np.dot(np.linalg.inv(np.dot(x.T, x) / x.shape[0] + np.identity(x.shape[1]) * self.l), x.T), y) / x.shape[0]
         
     def fit(self, x, y, x_, y_):        
         x = np.append(x, np.ones((x.shape[0], 1)), axis=1)
