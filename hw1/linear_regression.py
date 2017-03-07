@@ -126,8 +126,8 @@ def main():
     train = scan(args.n_prev, train)
     valid = scan(args.n_prev, valid)
 
-    train['x'] = transform(train['x'])
-    valid['x'] = transform(valid['x'])
+    # train['x'] = transform(train['x'])
+    # valid['x'] = transform(valid['x'])
     
     regressor = LinearRegressor(l=args.l, stop=args.stop, rate=args.rate)
     # regressor.fit(train['x'], train['y'], valid['x'], valid['y'])
@@ -137,7 +137,7 @@ def main():
     print('e in', rmse(regressor.predict(train['x']), train['y']))
     print('valid rmse:', rmse(regressor.predict(valid['x']), valid['y']))
 
-    train, _ = split_valid(pm25, raw_data, args.valid_ratio)
+    train, _ = split_valid(pm25, raw_data, 0)
     train = scan(args.n_prev, train)
     regressor.fit_analytics(train['x'], train['y'])
     test_y = regressor.predict(get_test_data(args.test))
