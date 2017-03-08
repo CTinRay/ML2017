@@ -146,8 +146,8 @@ def main():
 
     df = pd.DataFrame(data=train['x'])
     df.to_csv('/tmp/x.csv')
-    # train['x'] = transform(train['x'])
-    # valid['x'] = transform(valid['x'])
+    train['x'] = transform(train['x'])
+    valid['x'] = transform(valid['x'])
     
     regressor = LinearRegressor(l=args.l, stop=args.stop, rate=args.rate)
     # regressor.fit(train['x'], train['y'], valid['x'], valid['y'])
@@ -160,8 +160,10 @@ def main():
     
     train, _ = split_valid(pm25, raw_data, 0)
     train = scan(args.n_prev, train)
+    train['x'] = transform(train['x'])
     regressor.fit_analytics(train['x'], train['y'])
     test_x = get_test_data(args.test)[:,- args.n_prev * n_features:]
+    test_x = transform(test_x)
     test_y = regressor.predict(test_x)
     write_csv(args.out, test_y)
     
