@@ -15,7 +15,10 @@ class LinearRegressor:
 
     def fit_analytics(self, x, y):
         x = np.append(x, np.ones((x.shape[0], 1)), axis=1)
-        self.w = np.dot(np.dot(np.linalg.inv(np.dot(x.T, x) / x.shape[0] + np.identity(x.shape[1]) * self.l), x.T), y) / x.shape[0]
+        a = np.identity(x.shape[1])
+        # a[range(0, 18),range(0, 18)] = 3
+        # a[range(-19, -1),range(-19, -1)] = -1
+        self.w = np.dot(np.dot(np.linalg.inv(np.dot(x.T, x) / x.shape[0] + a * self.l), x.T), y) / x.shape[0]
         
     def fit(self, x, y, x_, y_):        
         x = np.append(x, np.ones((x.shape[0], 1)), axis=1)
@@ -69,12 +72,12 @@ def scan(n_prev, data):
     y = np.zeros(12 * (n_hours - n_prev))
     for m in range(12):
         for h in range(0, n_hours - n_prev):
-            start = m * (n_hours - n_prev) + h
-            end = m * (n_hours - n_prev) + h + n_prev
-            x[start] = data['x'][start:end].reshape(1, -1)
-            y[start] = data['y'][end]            
-            
-    # print('x', x)
+            ind = m * (n_hours - n_prev) + h
+            start = m * n_hours + h
+            end = m * n_hours + h + n_prev
+            x[ind] = data['x'][start:end].reshape(1, -1)
+            y[ind] = data['y'][end]            
+
     return {'x': x, 'y': y}
 
 def angle2abs(angle):
@@ -141,8 +144,10 @@ def main():
     train = scan(args.n_prev, train)
     valid = scan(args.n_prev, valid)
 
-    train['x'] = transform(train['x'])
-    valid['x'] = transform(valid['x'])
+    df = pd.DataFrame(data=train['x'])
+    df.to_csv('/tmp/x.csv')
+    # train['x'] = transform(train['x'])
+    # valid['x'] = transform(valid['x'])
     
     regressor = LinearRegressor(l=args.l, stop=args.stop, rate=args.rate)
     # regressor.fit(train['x'], train['y'], valid['x'], valid['y'])
@@ -151,7 +156,8 @@ def main():
     print('train size =', train['x'].shape)
     print('e in', rmse(regressor.predict(train['x']), train['y']))
     print('valid rmse:', rmse(regressor.predict(valid['x']), valid['y']))
-
+    # print('w', regressor.w[:-1].reshape((-1, 18)).T)
+    
     train, _ = split_valid(pm25, raw_data, 0)
     train = scan(args.n_prev, train)
     regressor.fit_analytics(train['x'], train['y'])
