@@ -132,6 +132,7 @@ def main():
     parser.add_argument('test', type=str, help='testing data')
     parser.add_argument('out', type=str, help='outcome')
     parser.add_argument('--valid_ratio', type=float, help='ratio of validation data', default=0.2)
+    parser.add_argument('--train_ratio', type=float, help='ratio of training data', default=1)
     parser.add_argument('--l', type=float, help='ratio of validation data', default=0.1)
     parser.add_argument('--stop', type=float, help='ratio of validation data', default=1)
     parser.add_argument('--rate', type=float, help='ratio of validation data', default=1e-5)
@@ -158,7 +159,7 @@ def main():
     print('valid rmse:', rmse(regressor.predict(valid['x']), valid['y']))
     # print('w', regressor.w[:-1].reshape((-1, 18)).T)
     
-    train, _ = split_valid(pm25, raw_data, 0)
+    train, _ = split_valid(pm25, raw_data, 1 - args.train_ratio)
     train = scan(args.n_prev, train)
     train['x'] = transform(train['x'])
     regressor.fit_analytics(train['x'], train['y'])
