@@ -20,7 +20,7 @@ class LinearRegressor:
         
     def fit(self, x, y, x_, y_, n_iter=1e100):        
         x = np.append(x, np.ones((x.shape[0], 1)), axis=1)
-        self.w = np.random.random((x.shape[1],))
+        self.w = np.zeros((x.shape[1],))
         dw = 2 * np.dot(x.T, np.dot(x, self.w) - y) / x.shape[0] + 2 * self.l * self.w
         i = 0
         while np.linalg.norm(dw) > self.stop and i < n_iter:
