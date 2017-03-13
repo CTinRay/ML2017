@@ -153,6 +153,11 @@ def main():
     regressor = LinearRegressor(l=args.l, stop=args.stop, rate=args.rate)
     # regressor.fit(train['x'], train['y'], valid['x'], valid['y'])
     regressor.fit_analytics(train['x'], train['y'])
+    mask = np.ones(regressor.w.shape)
+    mask[np.where(np.absolute(regressor.w) < 0.1)] = 0
+    mask = mask[:-1].reshape((1, -1))
+    train['x'] = train['x'] * mask
+    regressor.fit_analytics(train['x'], train['y'])
     
     print('train size =', train['x'].shape)
     print('e in', rmse(regressor.predict(train['x']), train['y']))
@@ -162,6 +167,11 @@ def main():
     train, _ = split_valid(pm25, raw_data, 1 - args.train_ratio)
     train = scan(args.n_prev, train)
     train['x'] = transform(train['x'])
+    regressor.fit_analytics(train['x'], train['y'])
+    mask = np.ones(regressor.w.shape)
+    mask[np.where(np.absolute(regressor.w) < 0.1)] = 0
+    mask = mask[:-1].reshape((1, -1))
+    train['x'] = train['x'] * mask
     regressor.fit_analytics(train['x'], train['y'])
     test_x = get_test_data(args.test)[:,- args.n_prev * n_features:]
     test_x = transform(test_x)
