@@ -27,14 +27,14 @@
 
 \begin{align*}
   & \sum_{n=1}^{N} (y^n-w \cdot x^n)^2 \\
- =& \lVert y - x w \rVert^2 \\
-  & \frac{\partial}{\partial w} \lVert y - x w \rVert^2 \\
- =& 2 x^T (y - x w)
+ =& \lVert y - X w \rVert^2 \\
+  & \frac{\partial}{\partial w} \lVert y - X w \rVert^2 \\
+ =& 2 X^T (y - X w)
 \end{align*}
 
 \begin{align*}
-  & 2 x^T (y - x w) = 0 \\
-  & w = (x^Tx)^{-1} x^T y
+  & 2 X^T (y - X w) = 0 \\
+  & w = (X^TX)^{-1} X^T y
 \end{align*}
 
 
