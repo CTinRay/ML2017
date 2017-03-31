@@ -3,6 +3,7 @@ import pandas as pd
 import argparse 
 from linear_model import LogisticRegression
 from linear_model import ProbabilisticGenenerative
+from ensemble import TreeClassifier
 import pdb
 import sys
 import traceback
@@ -80,9 +81,10 @@ def main():
 
     regressor = {}
     if args.model == 'logistic':
-        regressor = LogisticRegression(alpha=args.alpha, eta=args.eta,
+        logistic = LogisticRegression(alpha=args.alpha, eta=args.eta,
                                         n_iter=args.n_iter, batch_size=args.batch_size,
                                         verbose=args.verbose, class_weight=None)
+        regressor = TreeClassifier(base_estimator=logistic)
         
     elif args.model == 'pgm':
         regressor = ProbabilisticGenenerative()        

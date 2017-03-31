@@ -29,23 +29,26 @@ class LogisticRegression:
         self.class_weight = class_weight
         
             
-    def fit(self, X, y):
+    def fit(self, X, y, sample_weight=None):
         # padding
         n_rows = X.shape[0]
         X = np.concatenate((X, np.ones((n_rows, 1))), axis=1)
 
         # calc weight
         class_weight = {}
-        if self.class_weight == 'balanced':
-            class_weight = calc_balanced_weight(y)
-        elif self.class_weight is not None:
-            class_weight = self.class_weight
+        if sample_weight is not None:
+            if self.class_weight == 'balanced':
+                class_weight = calc_balanced_weight(y)
+            elif self.class_weight is not None:
+                class_weight = self.class_weight
+            else:
+                class_weight = {1 : 1, 0 : 1}
+
+            weight = np.zeros((X.shape[0], 1))
+            weight[np.where(y == 1)[0]] = class_weight[1]
+            weight[np.where(y == 0)[0]] = class_weight[0]
         else:
-            class_weight = {1 : 1, 0 : 1}
-            
-        weight = np.zeros((X.shape[0], 1))
-        weight[np.where(y == 1)[0]] = class_weight[1]
-        weight[np.where(y == 0)[0]] = class_weight[0]
+            weight = sample_weight
 
         # calc batch size
         if self.batch_size > 0:
@@ -69,9 +72,7 @@ class LogisticRegression:
                 batch_w = weight[b: b + batch_size]
                 z = - np.dot(batch_X, self.w)
                 sigz = 1 / (1 + np.exp(z))
-                gradient = batch_X.T * (sigz - batch_y).T
-                gradient *= batch_w.T
-                gradient = np.average(gradient, axis=1).reshape(-1, 1)
+                gradient = np.dot(batch_X.T, (sigz - batch_y) * batch_w)
                 gradient += self.alpha * self.w
 
                 if np.any(np.isnan(gradient)):
