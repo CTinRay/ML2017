@@ -3,10 +3,10 @@ import pandas as pd
 import argparse 
 from linear_model import LogisticRegression
 from linear_model import ProbabilisticGenenerative
-from ensemble import TreeClassifier
+# from ensemble import BaggingClassifier
 import pdb
 import sys
-import traceback
+# import traceback
 
 
 def get_X(csv):
@@ -52,6 +52,10 @@ def write_csv(y, filename):
     f.close()
 
 
+def transform(x):
+    return np.concatenate((x, x**2, x**3), axis=1)
+    
+
 def main():
     parser = argparse.ArgumentParser(description='ML HW2')    
     parser.add_argument('x_train', type=str, help='X_train')
@@ -70,10 +74,15 @@ def main():
     train, valid = split_valid(raw_train, args.valid_ratio)    
     test = {'x': get_X(args.x_test)}
 
+    # transform
+    train['x'] = transform(train['x'])
+    valid['x'] = transform(valid['x'])
+    test['x'] = transform(test['x'])
+
     # calculate mean, std
     mean = np.average(train['x'], axis=0)
     std = np.std(train['x'], axis=0) + 1e-10
-        
+    
     # normalize
     train['x'] = (train['x'] - mean) / std
     valid['x'] = (valid['x'] - mean) / std
@@ -81,10 +90,10 @@ def main():
 
     regressor = {}
     if args.model == 'logistic':
-        logistic = LogisticRegression(alpha=args.alpha, eta=args.eta,
+        regressor = LogisticRegression(alpha=args.alpha, eta=args.eta,
                                         n_iter=args.n_iter, batch_size=args.batch_size,
                                         verbose=args.verbose, class_weight=None)
-        regressor = TreeClassifier(base_estimator=logistic)
+        # regressor = BaggingClassifier(base_estimator=logistic, n_estimators=1, n_features=108)
         
     elif args.model == 'pgm':
         regressor = ProbabilisticGenenerative()        
@@ -96,7 +105,7 @@ def main():
     valid['y_'] = regressor.predict(valid['x']).reshape(-1, 1)
     print('accuracy valid:', accuracy(valid['y_'], valid['y']))
 
-    pdb.set_trace()
+    # pdb.set_trace()
     test['y_'] = regressor.predict(test['x'])
     write_csv(test['y_'], args.out)
     

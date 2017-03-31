@@ -59,8 +59,6 @@ class LogisticRegression:
         # start gradient descent
         self.w = np.zeros((X.shape[1], 1))
         for i in range(self.n_iter):
-            if i > self.n_iter - 50:
-                batch_size = X.shape[0]
             # shuffle
             inds = np.arange(n_rows)
             np.random.shuffle(inds)
