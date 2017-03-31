@@ -2,6 +2,14 @@ import numpy as np
 import pdb
 import math
 
+def calc_balanced_weight(y):
+    n_positive = np.sum(np.where(y == 1))
+    n_negative = np.sum(np.where(y == 0))
+    w_p = (n_positive + n_negative) / n_positive / 2
+    w_n = (n_positive + n_negative) / n_negative / 2
+    return {1 : w_p, 0 : w_n}
+
+
 class LogisticRegression:
     """ 
     Parameters
@@ -12,38 +20,57 @@ class LogisticRegression:
     eta: float
         Learning rate.
     """
-    def __init__(self, alpha=1e-4, eta=1e-5, n_iter=100, batch_size=10, verbose=0):
+    def __init__(self, alpha=1e-4, eta=1e-5, n_iter=100, batch_size=10, verbose=0, class_weight=None):
         self.alpha = alpha
         self.eta = eta
         self.n_iter = n_iter
         self.verbose = verbose
         self.batch_size = batch_size
+        self.class_weight = class_weight
         
-        
+            
     def fit(self, X, y):
         # padding
         n_rows = X.shape[0]
         X = np.concatenate((X, np.ones((n_rows, 1))), axis=1)
 
-        self.w = np.zeros((X.shape[1], 1))
+        # calc weight
+        class_weight = {}
+        if self.class_weight == 'balanced':
+            class_weight = calc_balanced_weight(y)
+        elif self.class_weight is not None:
+            class_weight = self.class_weight
+        else:
+            class_weight = {1 : 1, 0 : 1}
+            
+        weight = np.zeros((X.shape[0], 1))
+        weight[np.where(y == 1)[0]] = class_weight[1]
+        weight[np.where(y == 0)[0]] = class_weight[0]
+
+        # calc batch size
         if self.batch_size > 0:
             batch_size = self.batch_size            
         else:
             batch_size = n_rows
-            
+
+        # start gradient descent
+        self.w = np.zeros((X.shape[1], 1))
         for i in range(self.n_iter):
             # shuffle
             inds = np.arange(n_rows)
             np.random.shuffle(inds)
             X = X[inds]
             y = y[inds]
+            weight = weight[inds]
             
             for b in range(0, n_rows, batch_size):
                 batch_X = X[b: b + batch_size]
                 batch_y = y[b: b + batch_size]
+                batch_w = weight[b: b + batch_size]
                 z = - np.dot(batch_X, self.w)
                 sigz = 1 / (1 + np.exp(z))
-                gradient = np.dot(batch_X.T, sigz - batch_y)
+                gradient = batch_X.T * (sigz - batch_y).T
+                gradient *= batch_w.T
                 gradient = np.average(gradient, axis=1).reshape(-1, 1)
                 gradient += self.alpha * self.w
 

@@ -50,7 +50,7 @@ def write_csv(y, filename):
 
     f.close()
 
-    
+
 def main():
     parser = argparse.ArgumentParser(description='ML HW2')    
     parser.add_argument('x_train', type=str, help='X_train')
@@ -78,12 +78,12 @@ def main():
     valid['x'] = (valid['x'] - mean) / std
     test['x'] = (test['x'] - mean) / std
 
-
     regressor = {}
     if args.model == 'logistic':
         regressor = LogisticRegression(alpha=args.alpha, eta=args.eta,
                                         n_iter=args.n_iter, batch_size=args.batch_size,
-                                        verbose=args.verbose)
+                                        verbose=args.verbose, class_weight=None)
+        
     elif args.model == 'pgm':
         regressor = ProbabilisticGenenerative()        
             
