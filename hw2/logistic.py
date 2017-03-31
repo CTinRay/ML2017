@@ -2,9 +2,11 @@ import numpy as np
 import pandas as pd
 import argparse 
 from linear_model import LogisticRegression
+from linear_model import ProbabilisticGenenerative
 import pdb
 import sys
 import traceback
+
 
 def get_X(csv):
     data = pd.read_csv(csv)
@@ -61,6 +63,7 @@ def main():
     parser.add_argument('--alpha', type=float, help='regularization', default=1e-4)
     parser.add_argument('--verbose', type=int, help='verbose', default=0)
     parser.add_argument('--batch_size', type=int, help='batch size', default=10)    
+    parser.add_argument('--model', type=str, help='model {logistic, pgm}', default='logistic')    
     args = parser.parse_args()
     raw_train = {'x': get_X(args.x_train), 'y': get_Y(args.y_train)}
     train, valid = split_valid(raw_train, args.valid_ratio)    
@@ -75,17 +78,23 @@ def main():
     valid['x'] = (valid['x'] - mean) / std
     test['x'] = (test['x'] - mean) / std
 
-    
-    regressor = LogisticRegression(alpha=args.alpha, eta=args.eta,
-                                       n_iter=args.n_iter, batch_size=args.batch_size,
-                                       verbose=args.verbose)
+
+    regressor = {}
+    if args.model == 'logistic':
+        regressor = LogisticRegression(alpha=args.alpha, eta=args.eta,
+                                        n_iter=args.n_iter, batch_size=args.batch_size,
+                                        verbose=args.verbose)
+    elif args.model == 'pgm':
+        regressor = ProbabilisticGenenerative()        
+            
     regressor.fit(train['x'], train['y'])
-    train['y_'] = regressor.predict(train['x'])
+    train['y_'] = regressor.predict(train['x']).reshape(-1, 1)
     print('accuracy train:', accuracy(train['y_'], train['y']))
 
-    valid['y_'] = regressor.predict(valid['x'])
+    valid['y_'] = regressor.predict(valid['x']).reshape(-1, 1)
     print('accuracy valid:', accuracy(valid['y_'], valid['y']))
 
+    pdb.set_trace()
     test['y_'] = regressor.predict(test['x'])
     write_csv(test['y_'], args.out)
     

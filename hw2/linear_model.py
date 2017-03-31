@@ -1,5 +1,6 @@
 import numpy as np
 import pdb
+import math
 
 class LogisticRegression:
     """ 
@@ -73,5 +74,41 @@ class LogisticRegression:
         y = np.zeros((n_rows, 1))
         y[np.where(sigz > 0.5)] = 1
         return y
+
+
+    def predict_proba(self, X):
+        # padding
+        n_rows = X.shape[0]
+        X = np.concatenate((X, np.ones((n_rows, 1))), axis=1)
+
+        z = - np.dot(X, self.w)
+        sigz = 1 / (1 + np.exp(z))
+        return sigz
+
+    
+
+class ProbabilisticGenenerative:
+    def __init__(self):
+        pass
+
+    
+    def fit(self, X, y):
+        n_rows = X.shape[0]
+        X1 = X[np.where(y == 1)[0],:]
+        X0 = X[np.where(y == 0)[0],:]
+        covar = np.dot(X.T, X) / n_rows
+        covar_inv = np.linalg.inv(covar)
+        mu1 = np.average(X1, axis=0).reshape(-1, 1)
+        mu0 = np.average(X0, axis=0).reshape(-1, 1)
+        self.w = np.dot((mu1 - mu0).T, covar_inv).T
+        self.b = - 0.5 * np.dot(np.dot(mu1.T, covar_inv), mu1) 
+        self.b +=  0.5 * np.dot(np.dot(mu0.T, covar_inv), mu0)
+        self.b += math.log(X1.shape[0] / X0.shape[0])
+
         
-        
+    def predict(self, X):
+        z = np.dot(X, self.w) + self.b
+        sigz = 1 / (1 + np.exp(z))
+        y = np.zeros(X.shape[0])
+        y[np.where(sigz > 0.5)[0]] = 1
+        return y
