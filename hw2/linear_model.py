@@ -36,7 +36,7 @@ class LogisticRegression:
 
         # calc weight
         class_weight = {}
-        if sample_weight is not None:
+        if sample_weight is None:
             if self.class_weight == 'balanced':
                 class_weight = calc_balanced_weight(y)
             elif self.class_weight is not None:
@@ -59,6 +59,8 @@ class LogisticRegression:
         # start gradient descent
         self.w = np.zeros((X.shape[1], 1))
         for i in range(self.n_iter):
+            if i > self.n_iter - 50:
+                batch_size = X.shape[0]
             # shuffle
             inds = np.arange(n_rows)
             np.random.shuffle(inds)
@@ -78,7 +80,7 @@ class LogisticRegression:
                 if np.any(np.isnan(gradient)):
                     pdb.set_trace()
 
-                self.w -= self.eta * gradient
+                self.w -= self.eta * gradient / math.sqrt(i + 1)
 
                 if self.verbose >= 2:
                     l = np.log(1 + sigz) + (1 - batch_y) * z                    
