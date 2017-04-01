@@ -87,7 +87,7 @@ def main():
     train['x'] = (train['x'] - mean) / std
     valid['x'] = (valid['x'] - mean) / std
     test['x'] = (test['x'] - mean) / std
-
+    
     regressor = {}
     if args.model == 'logistic':
         regressor = LogisticRegression(alpha=args.alpha, eta=args.eta,
