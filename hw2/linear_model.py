@@ -126,7 +126,7 @@ class ProbabilisticGenenerative:
         n_rows = X.shape[0]
         X1 = X[np.where(y == 1)[0],:]
         X0 = X[np.where(y == 0)[0],:]
-        covar = np.dot(X.T, X) / n_rows
+        covar = np.dot(X.T, X) / n_rows + 1e-6 * np.identity(X.shape[1])
         covar_inv = np.linalg.inv(covar)
         mu1 = np.average(X1, axis=0).reshape(-1, 1)
         mu0 = np.average(X0, axis=0).reshape(-1, 1)
@@ -138,7 +138,7 @@ class ProbabilisticGenenerative:
         
     def predict(self, X):
         z = np.dot(X, self.w) + self.b
-        sigz = 1 / (1 + np.exp(z))
+        sigz = 1 / (1 + np.exp(-z))
         y = np.zeros(X.shape[0])
         y[np.where(sigz > 0.5)[0]] = 1
         return y
