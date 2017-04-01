@@ -57,6 +57,7 @@ class LogisticRegression:
             batch_size = n_rows
 
         # start gradient descent
+        gsum = 0
         self.w = np.zeros((X.shape[1], 1))
         for i in range(self.n_iter):
             # shuffle
@@ -78,7 +79,8 @@ class LogisticRegression:
                 if np.any(np.isnan(gradient)):
                     pdb.set_trace()
 
-                self.w -= self.eta * gradient / math.sqrt(i + 1)
+                gsum += np.linalg.norm(gradient) ** 2
+                self.w -= self.eta * gradient / math.sqrt(gsum)
 
                 if self.verbose >= 2:
                     l = np.log(1 + sigz) + (1 - batch_y) * z                    
