@@ -88,6 +88,7 @@ class NNModel:
         self.batch_size = batch_size
         self.n_iter = n_iter
         self.img_shape = img_shape
+        tf.GPUOptions(per_process_gpu_memory_fraction=0.05)
 
     def fit(self, X, y):
         # calc batch size
