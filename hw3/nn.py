@@ -49,26 +49,32 @@ class NNModel:
 
     def _inference(self, X, keep_prob):
         x_image = tf.reshape(X, [-1, self.img_shape[0], self.img_shape[1], 1])
-        self.conv_shape = [[5, 5, 1, 32], [5, 5, 32, 32]]
+        self.conv_shape = [[5, 5, 1, 32], [4, 4, 32, 32], [5, 5, 32, 64]]
 
         conv0_h = self._conv('conv0', x_image, self.conv_shape[0])
         pool0_h = self._max_pool(conv0_h)
-        # 24 x 24 x 32
+        # 20 x 20 x 32
 
         conv1_h = self._conv('conv1', pool0_h, self.conv_shape[1])
-        pool1_h = self._max_pool(conv1_h)
-        # 12 x 12 x 32
+        pool1_h = self._avg_pool(conv1_h)
+        # 10 x 10 x 32
 
-        conv_last = pool1_h
+        pool1_drop = tf.nn.dropout(pool1_h, keep_prob)
+        conv2_h = self._conv('conv2', pool1_drop, self.conv_shape[2])
+        pool2_h = self._avg_pool(conv2_h)
+        # 5 x 5 x 64
 
-        self.fc_widths = [1024, 10]
-        last_shape = [-1, 12, 12, 32]  # computed manually...
+        # conv_last = tf.nn.dropout(pool1_h, keep_prob)
+        conv_last = pool2_h
+
+        self.fc_widths = [2048, 10]
+        last_shape = [-1, 5, 5, 64]  # computed manually...
         flattern_width = last_shape[1] * last_shape[2] * last_shape[3]
         flat_h = tf.reshape(conv_last, [-1, flattern_width])
 
         fc0_h = self._fc('fc0', flat_h, [flattern_width, self.fc_widths[0]])
         fc0_drop = tf.nn.dropout(fc0_h, keep_prob)
-        fc1_h = self._fc_linear('fc1', fc0_h, [self.fc_widths[0], self.fc_widths[1]])  # 
+        fc1_h = self._fc_linear('fc1', fc0_drop, [self.fc_widths[0], self.fc_widths[1]])  # 
 
         return fc1_h
 
@@ -81,7 +87,7 @@ class NNModel:
     def _train(self, loss, learning_rate):
         tf.summary.scalar('loss', loss)
         optimizer = tf.train.AdamOptimizer(learning_rate)
-        global_step = tf.Variable(0, name='global_step', trainable=False)
+        global_step = tf.Variable(0, name='global_step', trainable=False)        
         train_op = optimizer.minimize(loss, global_step=global_step)
         return train_op
 
@@ -90,7 +96,7 @@ class NNModel:
         return tf.reduce_sum(tf.cast(correct, tf.int32))
 
     def __init__(self, eta=1e-5, nh1=2, batch_size=1,
-                 n_iter=100, img_shape=[48, 48]):
+                 n_iter=100, img_shape=[40, 40]):
         self.eta = eta
         self.nh1 = nh1
         self.batch_size = batch_size
@@ -114,8 +120,6 @@ class NNModel:
             loss = self._loss(logits, y_placeholder)
             train_op = self._train(loss, self.eta)
             n_correct = self._evaluate(logits, y_placeholder)
-            accuracy = n_correct / tf.shape(y_placeholder)[0]
-            tf.summary.scalar('accuracy', accuracy)
 
         init = tf.global_variables_initializer()
         saver = tf.train.Saver()
@@ -123,7 +127,7 @@ class NNModel:
 
         # log
         summary = tf.summary.merge_all()
-        summary_writer = tf.summary.FileWriter('./', self.sess.graph)
+        summary_writer = tf.summary.FileWriter('./' + time.ctime(), self.sess.graph)
 
         self.sess.run(init)
         # Start the training loop.
@@ -139,7 +143,7 @@ class NNModel:
             for b in range(0, X.shape[0], batch_size):
                 batch_X = X[b: b + batch_size]
                 batch_y = y[b: b + batch_size]
-                feed_dict = {X_placeholder: batch_X, y_placeholder: batch_y, keep_prob: 0.5}
+                feed_dict = {X_placeholder: batch_X, y_placeholder: batch_y, keep_prob: 0.8}
                 self.sess.run(train_op, feed_dict=feed_dict)
 
             duration = time.time() - start_time
@@ -152,28 +156,34 @@ class NNModel:
             # print('a in :', ain)
 
             # tf summary
+            train_correct = 0
             for b in range(0, X.shape[0], 4000):
                 batch_X = X[b: b + 4000]
                 batch_y = y[b: b + 4000]
                 feed_dict = {X_placeholder: batch_X, y_placeholder: batch_y, keep_prob: 1.0}
-                acc, summary_str, lo = self.sess.run([accuracy, summary, loss],
-                                                      feed_dict=feed_dict)
+                batch_correct, summary_str = self.sess.run([n_correct, summary],
+                                                            feed_dict=feed_dict)
                 summary_writer.add_summary(summary_str, i)
-                print('accuracy', acc, 'batch_Y.shape', batch_y.shape, 'loss', lo)
+                train_correct += batch_correct
+
+            avg_summary = tf.Summary()
+            accuracy = train_correct / X.shape[0]
+            avg_summary.value.add(tag="Train Accuracy", simple_value = accuracy)
+            print('accuracy', accuracy)
 
             if valid is not None:
+                valid_correct = 0
                 for b in range(0, valid['x'].shape[0], 4000):
                     batch_X = valid['x'][b: b + 4000]
                     batch_y = valid['y'][b: b + 4000]
                     feed_dict = {X_placeholder: batch_X, y_placeholder: batch_y, keep_prob: 1.0}
-                    acc, summary_str = self.sess.run([accuracy, summary],
-                                                          feed_dict=feed_dict)
-                    summary_writer.add_summary(summary_str, i)
-                    print('accuracy valid', acc, 'batch_Y.shape', batch_y.shape)
-                    print('logistic', np.sum(self.sess.run([logits],
-                                                           feed_dict=feed_dict)))
+                    valid_correct += self.sess.run(n_correct, feed_dict=feed_dict)
 
-                
+                accuracy = valid_correct / valid['x'].shape[0]
+                avg_summary.value.add(tag="Valid Accuracy", simple_value = accuracy)
+                print('accuracy valid', accuracy)
+
+            summary_writer.add_summary(avg_summary, i)
             summary_writer.flush()
 
     def predict(self, X):
@@ -187,6 +197,5 @@ class NNModel:
                 logits = self._inference(X_placeholder, keep_prob)
                 y_[b:b + 4000] = self.sess.run(tf.argmax(logits, axis=1),
                                    feed_dict={X_placeholder: batch_X, keep_prob: 1.0})
-                pdb.set_trace()
 
         return y_
