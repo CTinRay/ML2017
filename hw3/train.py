@@ -64,10 +64,19 @@ def write_csv(y, filename):
 
 
 def transform(x):
+    x = x.reshape((-1, 48, 48))
+    x = x[:, 4:44, 4:44]
+    x = x.reshape(-1, 40 * 40)
     x = x - np.mean(x, axis=1).reshape(-1, 1)
-    x = x / np.linalg.norm(x).reshape(-1, 1) * 100
+    x = x * 100 / np.linalg.norm(x) 
     return x
 
+
+def augmentate(data):
+    xs_flip = data['x'].reshape(-1, 48, 48)[:,:,::-1].reshape(-1, 48 * 48)
+    data['x'] = np.concatenate((data['x'], xs_flip), axis=0)
+    data['y'] = np.concatenate((data['y'], data['y']), axis=0)
+    
 
 def main():
     parser = argparse.ArgumentParser(description='ML HW2')
@@ -91,6 +100,9 @@ def main():
     train, valid = split_valid(raw_train, args.valid_ratio)
     # test = {'x': get_X(args.x_test)}
 
+    # do data augmentation
+    augmentate(train)
+    
     # transform
     train['x'] = transform(train['x'])
     valid['x'] = transform(valid['x'])
@@ -108,14 +120,14 @@ def main():
     classifier = NNModel(eta=args.eta,
                          n_iter=args.n_iter, batch_size=args.batch_size)
 
-    classifier.fit(train['x'], train['y'])
+    classifier.fit(train['x'], train['y'], valid)
     train['y_'] = classifier.predict(train['x'])
     print('accuracy train:', accuracy(train['y_'], train['y']))
 
     valid['y_'] = classifier.predict(valid['x'])
     print('accuracy valid:', accuracy(valid['y_'], valid['y']))
 
-    # pdb.set_trace()
+    pdb.set_trace()
     # test['y_'] = classifier.predict(test['x'])
     # write_csv(test['y_'], args.out)
 

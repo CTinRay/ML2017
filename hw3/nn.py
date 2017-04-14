@@ -67,7 +67,7 @@ class NNModel:
         # conv_last = tf.nn.dropout(pool1_h, keep_prob)
         conv_last = pool2_h
 
-        self.fc_widths = [2048, 10]
+        self.fc_widths = [3072, 10]
         last_shape = [-1, 5, 5, 64]  # computed manually...
         flattern_width = last_shape[1] * last_shape[2] * last_shape[3]
         flat_h = tf.reshape(conv_last, [-1, flattern_width])
