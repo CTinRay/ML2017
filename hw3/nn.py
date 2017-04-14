@@ -2,16 +2,17 @@ import tensorflow as tf
 import math
 import numpy as np
 import time
+import pdb
 
 
 class NNModel:
 
     def _get_var_normal(self, name, shape):
-        intializer = tf.truncated_normal_initializer(stddev=0.2)
+        intializer = tf.truncated_normal_initializer(stddev=0.1)
         return tf.get_variable(name, shape,
                                initializer=intializer)
 
-    def _get_var_const(self, name, shape, val=0.2):
+    def _get_var_const(self, name, shape, val=0.1):
         value = np.ones(shape) * val
         intializer = tf.constant_initializer(value)
         return tf.get_variable(name, shape,
@@ -40,7 +41,13 @@ class NNModel:
             fc_b = self._get_var_const(name + '_b', shape[-1])
             return tf.nn.relu(tf.matmul(x, fc_w) + fc_b)
 
-    def _inference(self, X):
+    def _fc_linear(self, name, x, shape):
+        with tf.variable_scope(name):
+            fc_w = self._get_var_normal(name + '_w', shape)
+            fc_b = self._get_var_const(name + '_b', shape[-1])
+            return tf.matmul(x, fc_w) + fc_b
+
+    def _inference(self, X, keep_prob):
         x_image = tf.reshape(X, [-1, self.img_shape[0], self.img_shape[1], 1])
         self.conv_shape = [[5, 5, 1, 32], [5, 5, 32, 32]]
 
@@ -49,7 +56,7 @@ class NNModel:
         # 24 x 24 x 32
 
         conv1_h = self._conv('conv1', pool0_h, self.conv_shape[1])
-        pool1_h = self._avg_pool(conv1_h)
+        pool1_h = self._max_pool(conv1_h)
         # 12 x 12 x 32
 
         conv_last = pool1_h
@@ -60,7 +67,8 @@ class NNModel:
         flat_h = tf.reshape(conv_last, [-1, flattern_width])
 
         fc0_h = self._fc('fc0', flat_h, [flattern_width, self.fc_widths[0]])
-        fc1_h = self._fc('fc1', fc0_h, [self.fc_widths[0], self.fc_widths[1]])
+        fc0_drop = tf.nn.dropout(fc0_h, keep_prob)
+        fc1_h = self._fc_linear('fc1', fc0_h, [self.fc_widths[0], self.fc_widths[1]])  # 
 
         return fc1_h
 
@@ -78,7 +86,7 @@ class NNModel:
         return train_op
 
     def _evaluate(self, logits, labels):
-        correct = tf.nn.in_top_k(logits, labels, 1)
+        correct = tf.equal(tf.argmax(logits, 1), labels)
         return tf.reduce_sum(tf.cast(correct, tf.int32))
 
     def __init__(self, eta=1e-5, nh1=2, batch_size=1,
@@ -90,7 +98,7 @@ class NNModel:
         self.img_shape = img_shape
         tf.GPUOptions(per_process_gpu_memory_fraction=0.05)
 
-    def fit(self, X, y):
+    def fit(self, X, y, valid=None):
         # calc batch size
         if self.batch_size > 0:
             batch_size = self.batch_size
@@ -99,9 +107,10 @@ class NNModel:
 
         # connect NN
         X_placeholder = tf.placeholder(tf.float32, shape=(None, X.shape[1]))
-        y_placeholder = tf.placeholder(tf.int32, shape=(None))
+        y_placeholder = tf.placeholder(tf.int64, shape=(None))
+        keep_prob = tf.placeholder(tf.float32, shape=(None))
         with tf.variable_scope('nn') as scope:
-            logits = self._inference(X_placeholder)
+            logits = self._inference(X_placeholder, keep_prob)
             loss = self._loss(logits, y_placeholder)
             train_op = self._train(loss, self.eta)
             n_correct = self._evaluate(logits, y_placeholder)
@@ -130,30 +139,54 @@ class NNModel:
             for b in range(0, X.shape[0], batch_size):
                 batch_X = X[b: b + batch_size]
                 batch_y = y[b: b + batch_size]
-                feed_dict = {X_placeholder: batch_X, y_placeholder: batch_y}
+                feed_dict = {X_placeholder: batch_X, y_placeholder: batch_y, keep_prob: 0.5}
                 self.sess.run(train_op, feed_dict=feed_dict)
 
             duration = time.time() - start_time
             print('iter %d, %d' % (i, duration))
-            self._evaluate(logits, y_placeholder)
+            # self._evaluate(logits, y_placeholder)
 
             # calc accuracy
-            ain = self.sess.run(accuracy,
-                                feed_dict={X_placeholder: X, y_placeholder: y})
-            print('a in :', ain)
+            # ain = self.sess.run(accuracy,
+            #                    feed_dict={X_placeholder: X, y_placeholder: y})
+            # print('a in :', ain)
 
             # tf summary
-            summary_str = self.sess.run(summary,
-                                        feed_dict={X_placeholder: X, y_placeholder: y})
-            summary_writer.add_summary(summary_str, i)
+            for b in range(0, X.shape[0], 4000):
+                batch_X = X[b: b + 4000]
+                batch_y = y[b: b + 4000]
+                feed_dict = {X_placeholder: batch_X, y_placeholder: batch_y, keep_prob: 1.0}
+                acc, summary_str, lo = self.sess.run([accuracy, summary, loss],
+                                                      feed_dict=feed_dict)
+                summary_writer.add_summary(summary_str, i)
+                print('accuracy', acc, 'batch_Y.shape', batch_y.shape, 'loss', lo)
+
+            if valid is not None:
+                for b in range(0, valid['x'].shape[0], 4000):
+                    batch_X = valid['x'][b: b + 4000]
+                    batch_y = valid['y'][b: b + 4000]
+                    feed_dict = {X_placeholder: batch_X, y_placeholder: batch_y, keep_prob: 1.0}
+                    acc, summary_str = self.sess.run([accuracy, summary],
+                                                          feed_dict=feed_dict)
+                    summary_writer.add_summary(summary_str, i)
+                    print('accuracy valid', acc, 'batch_Y.shape', batch_y.shape)
+                    print('logistic', np.sum(self.sess.run([logits],
+                                                           feed_dict=feed_dict)))
+
+                
             summary_writer.flush()
 
     def predict(self, X):
+        y_ = np.zeros(X.shape[0])
         with tf.variable_scope('nn', reuse=True):
-            X_placeholder = tf.placeholder(
-                tf.float32, shape=(None, X.shape[1]))
-            logits = self._inference(X_placeholder)
-            y_ = self.sess.run(tf.argmax(logits, axis=1),
-                               feed_dict={X_placeholder: X})
+            for b in range(0, X.shape[0], 4000):
+                batch_X = X[b: b + 4000]
+                X_placeholder = tf.placeholder(
+                    tf.float32, shape=(None, X.shape[1]))
+                keep_prob = tf.placeholder(tf.float32, shape=(None))
+                logits = self._inference(X_placeholder, keep_prob)
+                y_[b:b + 4000] = self.sess.run(tf.argmax(logits, axis=1),
+                                   feed_dict={X_placeholder: batch_X, keep_prob: 1.0})
+                pdb.set_trace()
 
         return y_
