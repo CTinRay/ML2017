@@ -68,15 +68,15 @@ def transform(x):
     x = x[:, 4:44, 4:44]
     x = x.reshape(-1, 40 * 40)
     # x = x - np.mean(x, axis=1).reshape(-1, 1)
-    # x = x * 100 / np.linalg.norm(x) 
+    # x = x * 100 / np.linalg.norm(x)
     return x
 
 
 def augmentate(data):
-    xs_flip = data['x'].reshape(-1, 48, 48)[:,:,::-1].reshape(-1, 48 * 48)
+    xs_flip = data['x'].reshape(-1, 48, 48)[:, :, ::-1].reshape(-1, 48 * 48)
     data['x'] = np.concatenate((data['x'], xs_flip), axis=0)
     data['y'] = np.concatenate((data['y'], data['y']), axis=0)
-    
+
 
 def main():
     parser = argparse.ArgumentParser(description='ML HW2')
@@ -102,7 +102,7 @@ def main():
 
     # do data augmentation
     augmentate(train)
-    
+
     # transform
     # train['x'] = transform(train['x'])
     # valid['x'] = transform(valid['x'])
