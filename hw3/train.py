@@ -67,8 +67,8 @@ def transform(x):
     x = x.reshape((-1, 48, 48))
     x = x[:, 4:44, 4:44]
     x = x.reshape(-1, 40 * 40)
-    x = x - np.mean(x, axis=1).reshape(-1, 1)
-    x = x * 100 / np.linalg.norm(x) 
+    # x = x - np.mean(x, axis=1).reshape(-1, 1)
+    # x = x * 100 / np.linalg.norm(x) 
     return x
 
 
@@ -104,8 +104,8 @@ def main():
     augmentate(train)
     
     # transform
-    train['x'] = transform(train['x'])
-    valid['x'] = transform(valid['x'])
+    # train['x'] = transform(train['x'])
+    # valid['x'] = transform(valid['x'])
     # test['x'] = transform(test['x'])
 
     # calculate mean, std

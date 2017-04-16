@@ -3,6 +3,9 @@ import math
 import numpy as np
 import time
 import pdb
+import random
+from scipy import ndimage
+
 
 
 class NNModel:
@@ -59,8 +62,8 @@ class NNModel:
         pool1_h = self._avg_pool(conv1_h)
         # 10 x 10 x 32
 
-        pool1_drop = tf.nn.dropout(pool1_h, keep_prob)
-        conv2_h = self._conv('conv2', pool1_drop, self.conv_shape[2])
+        # pool1_drop = tf.nn.dropout(pool1_h, keep_prob)
+        conv2_h = self._conv('conv2', pool1_h, self.conv_shape[2])
         pool2_h = self._avg_pool(conv2_h)
         # 5 x 5 x 64
 
@@ -95,6 +98,42 @@ class NNModel:
         correct = tf.equal(tf.argmax(logits, 1), labels)
         return tf.reduce_sum(tf.cast(correct, tf.int32))
 
+    def _crop(self, xs, l=40):
+        if xs.shape[1] < l:
+            p1 = (l - xs.shape[1]) // 2
+            p2 = l - xs.shape[1] - p1
+            xs = np.pad(xs, [(0, 0), (p1, p2), (0, 0)], mode='constant')
+
+        if xs.shape[2] < l:
+            p1 = (l - xs.shape[2]) // 2
+            p2 = l - xs.shape[2] - p1
+            xs = np.pad(xs, [(0, 0), (0, 0), (p1, p2)], mode='constant')
+
+        s1 = int(xs.shape[1] / 2 - l / 2)
+        s2 = int(xs.shape[2] / 2 - l / 2)    
+        return xs[:, s1:s1 + l, s2:s2 + l]
+
+    def _augmentate(self, xs):
+        xs = xs.reshape(-1, 48, 48)
+
+        # zoom
+        scale1 = random.uniform(0.8, 1.2)
+        scale2 = random.uniform(0.8, 1.2)
+        xs = ndimage.zoom(xs, [1, scale1, scale2], order=1)
+
+        # rotate
+        angle = random.uniform(-10, 10)
+        xs = ndimage.rotate(xs, angle, axes=(2, 1), order=1)
+
+        # shift
+        shift1 = random.uniform(-2, 2)
+        shift2 = random.uniform(-2, 2)
+        xs = ndimage.shift(xs, [0, shift1, shift2], order=1)
+
+        xs = self._crop(xs)
+        xs = xs.reshape(-1, 40 * 40)
+        return xs
+    
     def __init__(self, eta=1e-5, nh1=2, batch_size=1,
                  n_iter=100, img_shape=[40, 40]):
         self.eta = eta
@@ -111,8 +150,13 @@ class NNModel:
         else:
             batch_size = X.shape[0]
 
+
+        if valid is not None:
+            valid['x'] = self._crop(valid['x'].reshape(-1, 48, 48)).reshape(-1, 40 * 40)
+
+            
         # connect NN
-        X_placeholder = tf.placeholder(tf.float32, shape=(None, X.shape[1]))
+        X_placeholder = tf.placeholder(tf.float32, shape=(None, 40 * 40))
         y_placeholder = tf.placeholder(tf.int64, shape=(None))
         keep_prob = tf.placeholder(tf.float32, shape=(None))
         with tf.variable_scope('nn') as scope:
@@ -130,6 +174,7 @@ class NNModel:
         summary_writer = tf.summary.FileWriter('./' + time.ctime(), self.sess.graph)
 
         self.sess.run(init)
+        cropped_X = self._crop(X.reshape(-1, 48, 48)).reshape(-1, 40 * 40)
         # Start the training loop.
         for i in range(self.n_iter):
             start_time = time.time()
@@ -141,7 +186,7 @@ class NNModel:
             y = y[inds]
 
             for b in range(0, X.shape[0], batch_size):
-                batch_X = X[b: b + batch_size]
+                batch_X = self._augmentate(X[b: b + batch_size])
                 batch_y = y[b: b + batch_size]
                 feed_dict = {X_placeholder: batch_X, y_placeholder: batch_y, keep_prob: 0.8}
                 self.sess.run(train_op, feed_dict=feed_dict)
@@ -158,7 +203,7 @@ class NNModel:
             # tf summary
             train_correct = 0
             for b in range(0, X.shape[0], 4000):
-                batch_X = X[b: b + 4000]
+                batch_X = cropped_X[b: b + 4000]
                 batch_y = y[b: b + 4000]
                 feed_dict = {X_placeholder: batch_X, y_placeholder: batch_y, keep_prob: 1.0}
                 batch_correct, summary_str = self.sess.run([n_correct, summary],
