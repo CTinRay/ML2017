@@ -14,7 +14,7 @@ class NNModel:
         return tf.get_variable(name, shape,
                                initializer=intializer)
 
-    def _get_var_const(self, name, shape, val=0.1):
+    def _get_var_const(self, name, shape, val=0.2):
         value = np.ones(shape) * val
         intializer = tf.constant_initializer(value)
         return tf.get_variable(name, shape,
@@ -41,7 +41,8 @@ class NNModel:
         with tf.variable_scope(name):
             fc_w = self._get_var_normal(name + '_w', shape)
             fc_b = self._get_var_const(name + '_b', shape[-1])
-            return tf.nn.relu(tf.matmul(x, fc_w) + fc_b)
+            n_in = tf.matmul(x, fc_w) + fc_b
+            return tf.nn.relu(n_in) * 0.9 + 0.1 * n_in
 
     def _fc_linear(self, name, x, shape):
         with tf.variable_scope(name):
@@ -60,7 +61,11 @@ class NNModel:
 
         # shift
         a2 = aug_params['shift1']
+        a2 -= 24 * (tf.cos(aug_params['angle']) - tf.sin(aug_params['angle']))
+        a2 += 24
         b2 = aug_params['shift2']
+        b2 -= 24 * (tf.cos(aug_params['angle']) + tf.sin(aug_params['angle']))
+        b2 += 24
 
         # scale
         a0 *= aug_params['scale1']
@@ -71,39 +76,43 @@ class NNModel:
         b2 *= aug_params['scale2']
 
         x = tf.contrib.image.transform(x, [a0, a1, a2, b0, b1, b2, 0, 0])
-
-        tf.summary.image('augged_img', x[0:1])
-        
         return tf.reshape(x, (-1, self.img_shape[0] * self.img_shape[1]))
 
     def _inference(self, X, keep_prob):
         x_image = tf.reshape(X, [-1, self.img_shape[0], self.img_shape[1], 1])
+
+        def crop(img):
+            return tf.image.resize_image_with_crop_or_pad(img, 40, 40)
+        x_image = tf.map_fn(crop, x_image)
+        tf.summary.image('augged_img', x_image[0:1])
+
         self.conv_shape = [[5, 5, 1, 32], [4, 4, 32, 32], [5, 5, 32, 64]]
 
         conv0_h = self._conv('conv0', x_image, self.conv_shape[0])
         pool0_h = self._max_pool(conv0_h)
-        # 24 x 24 x 32
+        # 20 x 20 x 32
 
         conv1_h = self._conv('conv1', pool0_h, self.conv_shape[1])
         pool1_h = self._avg_pool(conv1_h)
-        # 12 x 12 x 32
+        # 10 x 10 x 32
 
         # pool1_drop = tf.nn.dropout(pool1_h, keep_prob)
         conv2_h = self._conv('conv2', pool1_h, self.conv_shape[2])
         pool2_h = self._avg_pool(conv2_h)
-        # 6 x 6 x 64
+        # 5 x 5 x 64
 
         # conv_last = tf.nn.dropout(pool1_h, keep_prob)
         conv_last = pool2_h
 
         self.fc_widths = [3072, 10]
-        last_shape = [-1, 6, 6, 64]  # computed manually...
+        last_shape = [-1, 5, 5, 64]  # computed manually...
         flattern_width = last_shape[1] * last_shape[2] * last_shape[3]
         flat_h = tf.reshape(conv_last, [-1, flattern_width])
 
-        fc0_h = self._fc('fc0', flat_h, [flattern_width, self.fc_widths[0]])
+        fc0_h = self._fc('fc0', flat_h,
+                         [flattern_width, self.fc_widths[0]])
         fc0_drop = tf.nn.dropout(fc0_h, keep_prob)
-        fc1_h = self._fc_linear(
+        fc1_h = self._fc(
             'fc1', fc0_drop, [self.fc_widths[0], self.fc_widths[1]])  #
 
         return fc1_h
@@ -126,12 +135,17 @@ class NNModel:
         return tf.reduce_sum(tf.cast(correct, tf.int32))
 
     def __init__(self, eta=1e-5, nh1=2, batch_size=1,
-                 n_iter=100, img_shape=[48, 48]):
+                 n_iter=100, img_shape=[48, 48], savefile=None):
         self.eta = eta
         self.nh1 = nh1
         self.batch_size = batch_size
         self.n_iter = n_iter
         self.img_shape = img_shape
+        if savefile is None:
+            self.savefile = time.ctime()
+        else:
+            self.savefile = savefile
+            
         tf.GPUOptions(per_process_gpu_memory_fraction=0.05)
 
     def fit(self, X, y, valid=None):
@@ -183,14 +197,23 @@ class NNModel:
             for b in range(0, X.shape[0], batch_size):
                 batch_X = X[b: b + batch_size]
                 batch_y = y[b: b + batch_size]
-                feed_dict = {raw_X: batch_X,
-                             raw_y: batch_y,
-                             keep_prob: 0.8,
-                             aug_params['angle']: random.uniform(-1, 1),
-                             aug_params['scale1']: 1,  # random.uniform(1, 1),
-                             aug_params['scale2']: 1,  # random.uniform(1, 1),
-                             aug_params['shift1']: 0,  # random.uniform(0, 0),
-                             aug_params['shift2']: 0}  # random.uniform(0, 0)}
+                feed_dict = {}
+                if i > -1:
+                    feed_dict = {
+                        raw_X: batch_X,
+                        raw_y: batch_y,
+                        keep_prob: 0.8,
+                        aug_params['angle']: random.uniform(-0.4, 0.4),
+                        aug_params['scale1']: random.uniform(0.8, 1.2),
+                        aug_params['scale2']: random.uniform(0.8, 1.2),
+                        aug_params['shift1']: random.uniform(-2, 2),
+                        aug_params['shift2']: random.uniform(-2, 2)
+                    }
+                else:
+                    feed_dict = {augged_X: batch_X,
+                                 keep_prob: 0.8,
+                                 raw_y: batch_y}
+
                 _, summary_str = self.sess.run([train_op, summary],
                                                feed_dict=feed_dict)
                 summary_writer.add_summary(summary_str, i)
@@ -237,6 +260,9 @@ class NNModel:
 
             summary_writer.add_summary(avg_summary, i)
             summary_writer.flush()
+
+        save_path = saver.save(self.sess, self.savefile)
+        print('saved to', save_path)
 
     def predict(self, X):
         y_ = np.zeros(X.shape[0])
