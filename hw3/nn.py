@@ -82,36 +82,43 @@ class NNModel:
         x_image = tf.reshape(X, [-1, self.img_shape[0], self.img_shape[1], 1])
 
         def crop(img):
-            return tf.image.resize_image_with_crop_or_pad(img, 40, 40)
+            return tf.image.resize_image_with_crop_or_pad(img, 42, 42)
         x_image = tf.map_fn(crop, x_image)
         tf.summary.image('augged_img', x_image[0:1])
 
-        self.conv_shape = [[5, 5, 1, 32], [4, 4, 32, 32], [5, 5, 32, 64]]
+        self.conv_shape = [[3, 3, 1, 32], [3, 3, 32, 32],
+                           [3, 3, 32, 64], [3, 3, 64, 64],
+                           [3, 3, 64, 128], [3, 3, 128, 128]]
 
         conv0_h = self._conv('conv0', x_image, self.conv_shape[0])
-        pool0_h = self._max_pool(conv0_h)
-        # 20 x 20 x 32
+        conv1_h = self._conv('conv1', conv0_h, self.conv_shape[1])
+        pool1_h = self._max_pool(conv1_h)
+        pool1_drop = tf.nn.dropout(pool1_h, keep_prob[0])
+        # 21 x 21 x 32
 
-        conv1_h = self._conv('conv1', pool0_h, self.conv_shape[1])
-        pool1_h = self._avg_pool(conv1_h)
-        # 10 x 10 x 32
+        conv2_h = self._conv('conv2', pool1_drop, self.conv_shape[2])
+        conv3_h = self._conv('conv3', conv2_h, self.conv_shape[3])
+        pool3_h = self._max_pool(conv3_h)
+        pool3_drop = tf.nn.dropout(pool3_h, keep_prob[1])
+        # 11 x 11 x 32
 
-        # pool1_drop = tf.nn.dropout(pool1_h, keep_prob)
-        conv2_h = self._conv('conv2', pool1_h, self.conv_shape[2])
-        pool2_h = self._avg_pool(conv2_h)
-        # 5 x 5 x 64
+        conv4_h = self._conv('conv4', pool3_drop, self.conv_shape[4])
+        conv5_h = self._conv('conv5', conv4_h, self.conv_shape[5])
+        pool5_h = self._max_pool(conv5_h)
+        pool5_drop = tf.nn.dropout(pool5_h, keep_prob[2])
+        # 6 x 6 x 32
 
         # conv_last = tf.nn.dropout(pool1_h, keep_prob)
-        conv_last = pool2_h
+        conv_last = pool5_drop
 
-        self.fc_widths = [3072, 10]
-        last_shape = [-1, 5, 5, 64]  # computed manually...
+        self.fc_widths = [2048, 10]
+        last_shape = [-1, 6, 6, 128]  # computed manually...
         flattern_width = last_shape[1] * last_shape[2] * last_shape[3]
         flat_h = tf.reshape(conv_last, [-1, flattern_width])
 
         fc0_h = self._fc('fc0', flat_h,
                          [flattern_width, self.fc_widths[0]])
-        fc0_drop = tf.nn.dropout(fc0_h, keep_prob)
+        fc0_drop = tf.nn.dropout(fc0_h, keep_prob[3])
         fc1_h = self._fc(
             'fc1', fc0_drop, [self.fc_widths[0], self.fc_widths[1]])  #
 
@@ -167,7 +174,10 @@ class NNModel:
         augged_X = tf.placeholder_with_default(augged_X_tensor,
                                                shape=(None, 48 * 48),
                                                name='augged_X')
-        keep_prob = tf.placeholder(tf.float32, shape=(None))
+        keep_prob = [tf.placeholder(tf.float32, shape=(None)),
+                     tf.placeholder(tf.float32, shape=(None)),
+                     tf.placeholder(tf.float32, shape=(None)),
+                     tf.placeholder(tf.float32, shape=(None))]
         with tf.variable_scope('nn'):
             logits = self._inference(augged_X, keep_prob)
             loss = self._loss(logits, raw_y)
@@ -193,7 +203,9 @@ class NNModel:
             np.random.shuffle(inds)
             X = X[inds]
             y = y[inds]
-
+            
+            avg_summary = tf.Summary()
+            aug_correct = 0
             for b in range(0, X.shape[0], batch_size):
                 batch_X = X[b: b + batch_size]
                 batch_y = y[b: b + batch_size]
@@ -202,7 +214,10 @@ class NNModel:
                     feed_dict = {
                         raw_X: batch_X,
                         raw_y: batch_y,
-                        keep_prob: 0.8,
+                        keep_prob[0]: 0.9,
+                        keep_prob[1]: 0.9,
+                        keep_prob[2]: 0.6,
+                        keep_prob[3]: 0.5,
                         aug_params['angle']: random.uniform(-0.4, 0.4),
                         aug_params['scale1']: random.uniform(0.8, 1.2),
                         aug_params['scale2']: random.uniform(0.8, 1.2),
@@ -214,12 +229,17 @@ class NNModel:
                                  keep_prob: 0.8,
                                  raw_y: batch_y}
 
-                _, summary_str = self.sess.run([train_op, summary],
-                                               feed_dict=feed_dict)
+                _, summary_str, batch_correct = self.sess.run([train_op, summary, n_correct],
+                                                              feed_dict=feed_dict)
+                aug_correct += batch_correct
                 summary_writer.add_summary(summary_str, i)
 
                 duration = time.time() - start_time
-            print('iter %d, %d' % (i, duration))
+
+            accuracy = aug_correct / X.shape[0]
+            avg_summary.value.add(tag="Aug Accuracy", simple_value=accuracy)
+
+            print('iter %d, %d, Aug: %f' % (i, duration, accuracy))
             # self._evaluate(logits, y_placeholder)
 
             # calc accuracy
@@ -233,12 +253,15 @@ class NNModel:
                 batch_X = X[b: b + 4000]
                 batch_y = y[b: b + 4000]
                 feed_dict = {augged_X: batch_X,
-                             raw_y: batch_y, keep_prob: 1.0}
+                             raw_y: batch_y,
+                             keep_prob[0]: 1.0,
+                             keep_prob[1]: 1.0,
+                             keep_prob[2]: 1.0,
+                             keep_prob[3]: 1.0}
                 batch_correct = self.sess.run(n_correct,
                                               feed_dict=feed_dict)
                 train_correct += batch_correct
 
-            avg_summary = tf.Summary()
             accuracy = train_correct / X.shape[0]
             avg_summary.value.add(tag="Train Accuracy", simple_value=accuracy)
             print('accuracy', accuracy)
@@ -249,7 +272,11 @@ class NNModel:
                     batch_X = valid['x'][b: b + 4000]
                     batch_y = valid['y'][b: b + 4000]
                     feed_dict = {augged_X: batch_X,
-                                 raw_y: batch_y, keep_prob: 1.0}
+                                 raw_y: batch_y,
+                                 keep_prob[0]: 1.0,
+                                 keep_prob[1]: 1.0,
+                                 keep_prob[2]: 1.0,
+                                 keep_prob[3]: 1.0}
                     valid_correct += self.sess.run(n_correct,
                                                    feed_dict=feed_dict)
 
@@ -273,7 +300,12 @@ class NNModel:
                     tf.float32, shape=(None, X.shape[1]))
                 keep_prob = tf.placeholder(tf.float32, shape=(None))
                 logits = self._inference(X_placeholder, keep_prob)
+                feed_dict = {X_placeholder: batch_X,
+                             keep_prob[0]: 1.0,
+                             keep_prob[1]: 1.0,
+                             keep_prob[2]: 1.0,
+                             keep_prob[3]: 1.0}
                 y_[b:b + 4000] = self.sess.run(tf.argmax(logits, axis=1),
-                                               feed_dict={X_placeholder: batch_X, keep_prob: 1.0})
+                                               feed_dict=feed_dict)
 
         return y_
