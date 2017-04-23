@@ -4,7 +4,7 @@ import argparse
 import pdb
 import sys
 import traceback
-from nn import NNModel
+from kr import CNNModel
 
 
 def get_X(csv):
@@ -101,7 +101,7 @@ def main():
     # test = {'x': get_X(args.x_test)}
 
     # do data augmentation
-    augmentate(train)
+    # augmentate(train)
 
     # transform
     # train['x'] = transform(train['x'])
@@ -117,7 +117,7 @@ def main():
     valid['x'] = (valid['x'] - mean) / std
     # test['x'] = (test['x'] - mean) / std
 
-    classifier = NNModel(eta=args.eta,
+    classifier = CNNModel(eta=args.eta,
                          n_iter=args.n_iter, batch_size=args.batch_size)
 
     classifier.fit(train['x'], train['y'], valid)
