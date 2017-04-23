@@ -9,6 +9,7 @@ from keras.layers import Convolution2D, MaxPooling2D
 from keras.optimizers import Adam
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
+from keras.preprocessing.image import ImageDataGenerator
 
 
 class CNNModel:
@@ -75,12 +76,31 @@ class CNNModel:
         y = self._one_hot_encode(y)
         valid = (valid['x'].reshape(-1, 48, 48, 1),
                  self._one_hot_encode(valid['y']))
+
+        # augmentation
+        datagen = ImageDataGenerator(
+            featurewise_center=True,
+            featurewise_std_normalization=True,
+            rotation_range=20,
+            width_shift_range=0.2,
+            height_shift_range=0.2,
+            horizontal_flip=True)
+
+        datagen.fit(X)
+        datagen_flow = datagen.flow(X, y, batch_size=self.batch_size)
+
+        self.model.fit_generator(datagen_flow,
+                                 steps_per_epoch=len(X) / self.batch_size,
+                                 epochs=self.n_iter,
+                                 validation_data=valid,
+                                 callbacks=[self.history])
+
         # pdb.set_trace()
-        self.model.fit(x=X, y=y,
-                       batch_size=self.batch_size,
-                       epochs=self.n_iter,
-                       validation_data=valid,
-                       callbacks=[self.history])
+        # self.model.fit(x=X, y=y,
+        #                batch_size=self.batch_size,
+        #                epochs=self.n_iter,
+        #                validation_data=valid,
+        #                callbacks=[self.history])
 
     def save(self, path=None):
         if path is None:
