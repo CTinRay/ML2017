@@ -64,11 +64,11 @@ def write_csv(y, filename):
 
 
 def transform(x):
-    x = x.reshape((-1, 48, 48))
-    x = x[:, 4:44, 4:44]
-    x = x.reshape(-1, 40 * 40)
-    # x = x - np.mean(x, axis=1).reshape(-1, 1)
-    # x = x * 100 / np.linalg.norm(x)
+    # x = x.reshape((-1, 48, 48))
+    # x = x[:, 4:44, 4:44]
+    # x = x.reshape(-1, 40 * 40)
+    x = x - np.mean(x, axis=1).reshape(-1, 1)
+    x = x * 100 / np.linalg.norm(x)
     return x
 
 
@@ -97,30 +97,41 @@ def main():
                         help='model {logistic, pgm}', default='logistic')
     args = parser.parse_args()
     raw_train = get_XY(args.train)
+
+    mean = np.mean(raw_train['x'], axis=0)
+    # std = np.std(raw_train['x'], axis=0) + 1e-10
+    abs_max = np.max(np.abs(raw_train['x'] - mean))
+    raw_train['x'] = (raw_train['x'] - mean) / abs_max
+    
     train, valid = split_valid(raw_train, args.valid_ratio)
     # test = {'x': get_X(args.x_test)}
 
     # do data augmentation
     # augmentate(train)
+ 
+    # calculate mean, std
+    # mean = np.average(train['x'], axis=0)
+    # std = np.std(train['x'], axis=0) + 1e-10
+    # abs_max = np.max(np.abs(train['x'] - mean))
 
+    # normalize
+    # train['x'] = (train['x'] - mean) / abs_max
+    # valid['x'] = (valid['x'] - mean) / abs_max
+    # test['x'] = (test['x'] - mean) / std
+    
+    
     # transform
     # train['x'] = transform(train['x'])
     # valid['x'] = transform(valid['x'])
     # test['x'] = transform(test['x'])
 
-    # calculate mean, std
-    mean = np.average(train['x'], axis=0)
-    std = np.std(train['x'], axis=0) + 1e-10
-
-    # normalize
-    train['x'] = (train['x'] - mean) / std
-    valid['x'] = (valid['x'] - mean) / std
-    # test['x'] = (test['x'] - mean) / std
-
+    
     classifier = CNNModel(eta=args.eta,
                          n_iter=args.n_iter, batch_size=args.batch_size)
 
     classifier.fit(train['x'], train['y'], valid)
+    classifier.save()
+    classifier.dump_history()
     train['y_'] = classifier.predict(train['x'])
     print('accuracy train:', accuracy(train['y_'], train['y']))
 

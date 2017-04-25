@@ -5,11 +5,14 @@ import numpy as np
 from keras.callbacks import Callback
 from keras.models import Sequential
 from keras.layers import Input, Dense, Dropout, Flatten, Activation
-from keras.layers import Convolution2D, MaxPooling2D
+from keras.layers.convolutional import Conv2D
+from keras.layers.pooling import MaxPooling2D
+from keras.layers.normalization import BatchNormalization
 from keras.optimizers import Adam
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 from keras.preprocessing.image import ImageDataGenerator
+from keras.layers.noise import GaussianNoise
 
 
 class CNNModel:
@@ -30,18 +33,51 @@ class CNNModel:
 
     def _build_model(self):
         self.model = Sequential()
+
+        self.model.add(GaussianNoise(0.01, input_shape=(48, 48, 1)))
+
         # CNN part (you can repeat this part several times)
-        self.model.add(Convolution2D(8, 1, 1,
-                                     border_mode='valid',
-                                     input_shape=(48, 48, 1)))
-        self.model.add(Activation('relu'))
-        self.model.add(MaxPooling2D(pool_size=(2, 2)))
-        self.model.add(Dropout(0.8))
+        self.model.add(Conv2D(64, (3, 3),
+                              padding='same', activation='relu'))
+        print('(before drop) shape:', self.model.output_shape)
+        self.model.add(BatchNormalization(momentum=0.5))
+        self.model.add(MaxPooling2D())
+
+        print('shape:', self.model.output_shape)
+        # 24 x 24
+
+        self.model.add(Conv2D(128, (5, 5),
+                              padding='same', activation='relu'))
+        self.model.add(BatchNormalization(momentum=0.5))
+        self.model.add(MaxPooling2D())
+
+        print('shape:', self.model.output_shape)
+        # 12 x 12
+        self.model.add(Conv2D(512, (3, 3),
+                              padding='same', activation='relu'))
+        self.model.add(BatchNormalization(momentum=0.5))
+        self.model.add(MaxPooling2D())
+
+        print('shape:', self.model.output_shape)
+        # 6 x 6
+
+        self.model.add(Conv2D(512, (3, 3),
+                              padding='same', activation='relu'))
+        self.model.add(BatchNormalization(momentum=0.5))
+        self.model.add(MaxPooling2D())
 
         # Fully connected part
         self.model.add(Flatten())
-        self.model.add(Dense(16))
+        self.model.add(Dense(256))
         self.model.add(Activation('relu'))
+        self.model.add(BatchNormalization(momentum=0.5))
+        self.model.add(Dropout(0.5))
+
+        self.model.add(Dense(256))
+        self.model.add(Activation('relu'))
+        self.model.add(BatchNormalization(momentum=0.5))
+        self.model.add(Dropout(0.5))
+
         self.model.add(Dense(self.n_classes))
         self.model.add(Activation('softmax'))
         opt = Adam(lr=self.eta, decay=0.0)
@@ -55,7 +91,7 @@ class CNNModel:
         one_hot = np.zeros((labels.shape[0], n_classes))
         one_hot[np.arange(one_hot.shape[0]), labels] = 1
         return one_hot
-        
+
     def __init__(self, batch_size=40, n_iter=100,
                  eta=1e-5, save_path=None):
         self.n_classes = 7
@@ -63,10 +99,12 @@ class CNNModel:
         self.n_iter = n_iter
         self.eta = eta
         if save_path is None:
-            save_path = time.ctime()
-                    
+            self.save_path = time.ctime()
+        else:
+            self.save_path = save_path
+
         config = tf.ConfigProto()
-        config.gpu_options.per_process_gpu_memory_fraction = 0.1
+        config.gpu_options.per_process_gpu_memory_fraction = 0.4
         set_session(tf.Session(config=config))
 
     def fit(self, X, y, valid):
@@ -79,12 +117,16 @@ class CNNModel:
 
         # augmentation
         datagen = ImageDataGenerator(
-            featurewise_center=True,
-            featurewise_std_normalization=True,
-            rotation_range=20,
-            width_shift_range=0.2,
-            height_shift_range=0.2,
-            horizontal_flip=True)
+            # featurewise_center=True,
+            # featurewise_std_normalization=True,
+            # samplewise_center=True,
+            rotation_range=40,
+            width_shift_range=0.1,
+            height_shift_range=0.1,
+            zoom_range=0.2,
+            horizontal_flip=True,
+            fill_mode='constant',
+            vertical_flip=False)
 
         datagen.fit(X)
         datagen_flow = datagen.flow(X, y, batch_size=self.batch_size)
@@ -95,7 +137,6 @@ class CNNModel:
                                  validation_data=valid,
                                  callbacks=[self.history])
 
-        # pdb.set_trace()
         # self.model.fit(x=X, y=y,
         #                batch_size=self.batch_size,
         #                epochs=self.n_iter,
@@ -106,6 +147,7 @@ class CNNModel:
         if path is None:
             path = self.save_path
 
+        os.mkdir(path)
         self.model.save(os.path.join(path, 'model.h5'))
 
     def dump_history(self, path=None):
