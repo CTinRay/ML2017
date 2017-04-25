@@ -4,6 +4,7 @@ import argparse
 import pdb
 import sys
 import traceback
+import pickle
 from kr import CNNModel
 
 
@@ -99,9 +100,12 @@ def main():
     raw_train = get_XY(args.train)
 
     mean = np.mean(raw_train['x'], axis=0)
-    # std = np.std(raw_train['x'], axis=0) + 1e-10
+    std = np.std(raw_train['x'], axis=0) + 1e-10
     abs_max = np.max(np.abs(raw_train['x'] - mean))
     raw_train['x'] = (raw_train['x'] - mean) / abs_max
+
+    with open('mean-max.pickle', 'wb') as f:
+        pickle.dump({'mean': mean, 'max': abs_max}, f)
     
     train, valid = split_valid(raw_train, args.valid_ratio)
     # test = {'x': get_X(args.x_test)}

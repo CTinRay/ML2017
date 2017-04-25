@@ -6,9 +6,10 @@ from keras.callbacks import Callback
 from keras.models import Sequential
 from keras.layers import Input, Dense, Dropout, Flatten, Activation
 from keras.layers.convolutional import Conv2D
-from keras.layers.pooling import MaxPooling2D
+from keras.layers.pooling import MaxPooling2D, AveragePooling2D
 from keras.layers.normalization import BatchNormalization
 from keras.optimizers import Adam
+from keras import regularizers
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 from keras.preprocessing.image import ImageDataGenerator
@@ -34,53 +35,57 @@ class CNNModel:
     def _build_model(self):
         self.model = Sequential()
 
-        self.model.add(GaussianNoise(0.01, input_shape=(48, 48, 1)))
+        # self.model.add(GaussianNoise(0.01, input_shape=(48, 48, 1)))
 
         # CNN part (you can repeat this part several times)
-        self.model.add(Conv2D(64, (3, 3),
-                              padding='same', activation='relu'))
-        print('(before drop) shape:', self.model.output_shape)
-        self.model.add(BatchNormalization(momentum=0.5))
+        self.model.add(Conv2D(32, (4, 4),
+                              padding='same', activation='relu',
+                              input_shape=(48, 48, 1),
+                              kernel_regularizer=regularizers.l2(1e-9)))
+        # self.model.add(BatchNormalization(momentum=0.5))
         self.model.add(MaxPooling2D())
 
-        print('shape:', self.model.output_shape)
         # 24 x 24
 
-        self.model.add(Conv2D(128, (5, 5),
-                              padding='same', activation='relu'))
-        self.model.add(BatchNormalization(momentum=0.5))
-        self.model.add(MaxPooling2D())
+        self.model.add(Conv2D(64, (5, 5),
+                              padding='same', activation='relu',
+                              kernel_regularizer=regularizers.l2(1e-9)))
+        # self.model.add(BatchNormalization(momentum=0.5))
+        self.model.add(AveragePooling2D())
 
-        print('shape:', self.model.output_shape)
         # 12 x 12
-        self.model.add(Conv2D(512, (3, 3),
-                              padding='same', activation='relu'))
-        self.model.add(BatchNormalization(momentum=0.5))
-        self.model.add(MaxPooling2D())
+        self.model.add(Conv2D(64, (4, 4),
+                              padding='same', activation='relu',
+                       kernel_regularizer=regularizers.l2(1e-9)))
+        # self.model.add(BatchNormalization(momentum=0.5))
+        self.model.add(AveragePooling2D())
 
-        print('shape:', self.model.output_shape)
         # 6 x 6
+        # self.model.add(Conv2D(128, (4, 4),
+        #                padding='same', activation='relu'))
+        # self.model.add(AveragePooling2D())
 
-        self.model.add(Conv2D(512, (3, 3),
-                              padding='same', activation='relu'))
-        self.model.add(BatchNormalization(momentum=0.5))
-        self.model.add(MaxPooling2D())
+        # self.model.add(Conv2D(512, (3, 3),
+        #                       padding='same', activation='relu'))
+        # self.model.add(BatchNormalization(momentum=0.5))
+        # self.model.add(MaxPooling2D())
 
         # Fully connected part
         self.model.add(Flatten())
-        self.model.add(Dense(256))
+        self.model.add(Dense(1024 * 3,
+                             kernel_regularizer=regularizers.l2(1e-7)))
         self.model.add(Activation('relu'))
-        self.model.add(BatchNormalization(momentum=0.5))
-        self.model.add(Dropout(0.5))
+        # self.model.add(BatchNormalization(momentum=0.5))
+        self.model.add(Dropout(0.8))
 
-        self.model.add(Dense(256))
-        self.model.add(Activation('relu'))
-        self.model.add(BatchNormalization(momentum=0.5))
-        self.model.add(Dropout(0.5))
+        # self.model.add(Dense(256))
+        # self.model.add(Activation('relu'))
+        # self.model.add(BatchNormalization(momentum=0.5))
+        # self.model.add(Dropout(0.5))
 
         self.model.add(Dense(self.n_classes))
         self.model.add(Activation('softmax'))
-        opt = Adam(lr=self.eta, decay=0.0)
+        opt = Adam(lr=self.eta, decay=0.00005)
         self.model.compile(loss='categorical_crossentropy',
                            optimizer=opt,
                            metrics=['accuracy'])
@@ -120,7 +125,7 @@ class CNNModel:
             # featurewise_center=True,
             # featurewise_std_normalization=True,
             # samplewise_center=True,
-            rotation_range=40,
+            rotation_range=45,
             width_shift_range=0.1,
             height_shift_range=0.1,
             zoom_range=0.2,
