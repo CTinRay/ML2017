@@ -42,7 +42,7 @@ class CNNModel:
                               padding='same', activation='relu',
                               input_shape=(48, 48, 1),
                               kernel_regularizer=regularizers.l2(1e-9)))
-        # self.model.add(BatchNormalization(momentum=0.5))
+        self.model.add(BatchNormalization(momentum=0.5))
         self.model.add(MaxPooling2D())
 
         # 24 x 24
@@ -50,20 +50,22 @@ class CNNModel:
         self.model.add(Conv2D(64, (5, 5),
                               padding='same', activation='relu',
                               kernel_regularizer=regularizers.l2(1e-9)))
-        # self.model.add(BatchNormalization(momentum=0.5))
+        self.model.add(BatchNormalization(momentum=0.5))
         self.model.add(AveragePooling2D())
+        # self.model.add(Dropout(0.8))
 
         # 12 x 12
         self.model.add(Conv2D(64, (4, 4),
                               padding='same', activation='relu',
                        kernel_regularizer=regularizers.l2(1e-9)))
-        # self.model.add(BatchNormalization(momentum=0.5))
+        self.model.add(BatchNormalization(momentum=0.5))
         self.model.add(AveragePooling2D())
 
         # 6 x 6
-        # self.model.add(Conv2D(128, (4, 4),
-        #                padding='same', activation='relu'))
-        # self.model.add(AveragePooling2D())
+        self.model.add(Conv2D(128, (3, 3),
+                       padding='same', activation='relu'))
+        self.model.add(BatchNormalization(momentum=0.5))
+        self.model.add(AveragePooling2D())
 
         # self.model.add(Conv2D(512, (3, 3),
         #                       padding='same', activation='relu'))
@@ -72,15 +74,14 @@ class CNNModel:
 
         # Fully connected part
         self.model.add(Flatten())
-        self.model.add(Dense(1024 * 3,
-                             kernel_regularizer=regularizers.l2(1e-7)))
+        self.model.add(Dense(512))
         self.model.add(Activation('relu'))
-        # self.model.add(BatchNormalization(momentum=0.5))
+        self.model.add(BatchNormalization(momentum=0.5))
         self.model.add(Dropout(0.8))
 
-        # self.model.add(Dense(256))
-        # self.model.add(Activation('relu'))
-        # self.model.add(BatchNormalization(momentum=0.5))
+        self.model.add(Dense(512))
+        self.model.add(Activation('relu'))
+        self.model.add(BatchNormalization(momentum=0.5))
         # self.model.add(Dropout(0.5))
 
         self.model.add(Dense(self.n_classes))
@@ -125,7 +126,7 @@ class CNNModel:
             # featurewise_center=True,
             # featurewise_std_normalization=True,
             # samplewise_center=True,
-            rotation_range=45,
+            rotation_range=30,
             width_shift_range=0.1,
             height_shift_range=0.1,
             zoom_range=0.2,
