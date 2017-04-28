@@ -10,6 +10,7 @@ from keras.layers.pooling import MaxPooling2D, AveragePooling2D
 from keras.layers.normalization import BatchNormalization
 from keras.optimizers import Adam
 from keras import regularizers
+from keras.layers.advanced_activations import LeakyReLU
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 from keras.preprocessing.image import ImageDataGenerator
@@ -38,55 +39,57 @@ class CNNModel:
         # self.model.add(GaussianNoise(0.01, input_shape=(48, 48, 1)))
 
         # CNN part (you can repeat this part several times)
-        self.model.add(Conv2D(32, (4, 4),
-                              padding='same', activation='relu',
-                              input_shape=(48, 48, 1),
-                              kernel_regularizer=regularizers.l2(1e-9)))
-        self.model.add(BatchNormalization(momentum=0.5))
+        self.model.add(Conv2D(32, (3, 3),
+                              padding='same',
+                              input_shape=(48, 48, 1)))
+        # kernel_regularizer=regularizers.l2(1e-9)))
+        self.model.add(BatchNormalization())
+        self.model.add(LeakyReLU())
         self.model.add(MaxPooling2D())
+        # self.model.add(Dropout(0.1))
 
         # 24 x 24
 
-        self.model.add(Conv2D(64, (5, 5),
-                              padding='same', activation='relu',
-                              kernel_regularizer=regularizers.l2(1e-9)))
-        self.model.add(BatchNormalization(momentum=0.5))
-        self.model.add(AveragePooling2D())
-        # self.model.add(Dropout(0.8))
+        self.model.add(Conv2D(64, (3, 3),
+                              padding='same'))
+        # kernel_regularizer=regularizers.l2(1e-9)))
+        self.model.add(BatchNormalization())
+        self.model.add(LeakyReLU())
+        self.model.add(MaxPooling2D())
+        self.model.add(Dropout(0.1))
 
         # 12 x 12
-        self.model.add(Conv2D(64, (4, 4),
-                              padding='same', activation='relu',
-                       kernel_regularizer=regularizers.l2(1e-9)))
-        self.model.add(BatchNormalization(momentum=0.5))
-        self.model.add(AveragePooling2D())
+        self.model.add(Conv2D(128, (3, 3),
+                              padding='same'))
+        # kernel_regularizer=regularizers.l2(1e-9)))
+        self.model.add(BatchNormalization())
+        self.model.add(LeakyReLU())
+        self.model.add(MaxPooling2D())
+        self.model.add(Dropout(0.2))
 
         # 6 x 6
-        self.model.add(Conv2D(128, (3, 3),
-                       padding='same', activation='relu'))
-        self.model.add(BatchNormalization(momentum=0.5))
-        self.model.add(AveragePooling2D())
-
-        # self.model.add(Conv2D(512, (3, 3),
-        #                       padding='same', activation='relu'))
-        # self.model.add(BatchNormalization(momentum=0.5))
-        # self.model.add(MaxPooling2D())
+        self.model.add(Conv2D(256, (3, 3),
+                              padding='same'))
+        self.model.add(BatchNormalization())
+        self.model.add(LeakyReLU())
+        self.model.add(MaxPooling2D())
+        self.model.add(Dropout(0.1))
 
         # Fully connected part
         self.model.add(Flatten())
         self.model.add(Dense(512))
-        self.model.add(Activation('relu'))
-        self.model.add(BatchNormalization(momentum=0.5))
-        self.model.add(Dropout(0.8))
+        self.model.add(BatchNormalization())
+        self.model.add(LeakyReLU())
+        self.model.add(Dropout(0.5))
 
-        self.model.add(Dense(512))
-        self.model.add(Activation('relu'))
-        self.model.add(BatchNormalization(momentum=0.5))
-        # self.model.add(Dropout(0.5))
+        # self.model.add(Dense(256))
+        # self.model.add(BatchNormalization())
+        # self.model.add(LeakyReLU())
+        # self.model.add(Dropout(0.1))
 
         self.model.add(Dense(self.n_classes))
         self.model.add(Activation('softmax'))
-        opt = Adam(lr=self.eta, decay=0.00005)
+        opt = Adam(lr=self.eta, decay=self.eta_decay)
         self.model.compile(loss='categorical_crossentropy',
                            optimizer=opt,
                            metrics=['accuracy'])
@@ -99,11 +102,12 @@ class CNNModel:
         return one_hot
 
     def __init__(self, batch_size=40, n_iter=100,
-                 eta=1e-5, save_path=None):
+                 eta=1e-5, save_path=None, eta_decay=5e-6):
         self.n_classes = 7
         self.batch_size = batch_size
         self.n_iter = n_iter
         self.eta = eta
+        self.eta_decay = eta_decay
         if save_path is None:
             self.save_path = time.ctime()
         else:
@@ -112,6 +116,13 @@ class CNNModel:
         config = tf.ConfigProto()
         config.gpu_options.per_process_gpu_memory_fraction = 0.4
         set_session(tf.Session(config=config))
+
+    def save(self, n_iter, path=None):
+        if path is None:
+            path = self.save_path
+
+        os.mkdir(path)
+        self.model.save(os.path.join(path, 'model-%d.h5' % n_iter))
 
     def fit(self, X, y, valid):
         self._build_model()
@@ -137,9 +148,19 @@ class CNNModel:
         datagen.fit(X)
         datagen_flow = datagen.flow(X, y, batch_size=self.batch_size)
 
+        for i in range(self.n_iter // 100):
+            self.model.fit_generator(datagen_flow,
+                                     steps_per_epoch=len(X) / self.batch_size,
+                                     initial_epoch=i * 100,
+                                     epochs=100,
+                                     validation_data=valid,
+                                     callbacks=[self.history])
+            self.save(i)
+
         self.model.fit_generator(datagen_flow,
                                  steps_per_epoch=len(X) / self.batch_size,
-                                 epochs=self.n_iter,
+                                 initial_epoch=i * 100,
+                                 epochs=self.n_iter % 100,
                                  validation_data=valid,
                                  callbacks=[self.history])
 
@@ -148,13 +169,6 @@ class CNNModel:
         #                epochs=self.n_iter,
         #                validation_data=valid,
         #                callbacks=[self.history])
-
-    def save(self, path=None):
-        if path is None:
-            path = self.save_path
-
-        os.mkdir(path)
-        self.model.save(os.path.join(path, 'model.h5'))
 
     def dump_history(self, path=None):
         if path is None:

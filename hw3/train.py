@@ -34,7 +34,7 @@ def get_XY(csv):
     return {'x': np.array(xs), 'y': np.array(ys)}
 
 
-def split_valid(raw, valid_ratio):
+def split_valid(raw, valid_ratio, filename=None):
     n_rows = raw['x'].shape[0]
 
     # shuffle data
@@ -42,6 +42,10 @@ def split_valid(raw, valid_ratio):
     np.random.shuffle(inds)
     raw['x'] = raw['x'][inds]
     raw['y'] = raw['y'][inds]
+
+    if filename is not None:
+        with open(filename, 'wb') as f:
+            pickle.dump(inds, f)
 
     # split data
     n_valid = int(n_rows * valid_ratio)
@@ -89,52 +93,49 @@ def main():
                         help='ratio of validation data', default=100)
     parser.add_argument('--eta', type=float,
                         help='learning rate', default=1e-5)
-    parser.add_argument('--alpha', type=float,
-                        help='regularization', default=1e-4)
     parser.add_argument('--verbose', type=int, help='verbose', default=0)
     parser.add_argument('--batch_size', type=int,
                         help='batch size', default=10)
-    parser.add_argument('--model', type=str,
-                        help='model {logistic, pgm}', default='logistic')
+    parser.add_argument('--valid_file', type=str,
+                        help='pickle to store indices used to validate.',
+                        default='valid.pickle')
+    parser.add_argument('--mean_max_file', type=str,
+                        default='mean_max.pickle',
+                        help='pickle to store mean and max')
+    parser.add_argument('--eta_decay', type=float, default=0.000005,
+                        help='pickle to store mean and max')
     args = parser.parse_args()
     raw_train = get_XY(args.train)
 
-    mean = np.mean(raw_train['x'], axis=0)
-    std = np.std(raw_train['x'], axis=0) + 1e-10
-    abs_max = np.max(np.abs(raw_train['x'] - mean))
-    raw_train['x'] = (raw_train['x'] - mean) / abs_max
-
-    with open('mean-max.pickle', 'wb') as f:
-        pickle.dump({'mean': mean, 'max': abs_max}, f)
-    
     train, valid = split_valid(raw_train, args.valid_ratio)
     # test = {'x': get_X(args.x_test)}
 
     # do data augmentation
     # augmentate(train)
- 
+
     # calculate mean, std
-    # mean = np.average(train['x'], axis=0)
-    # std = np.std(train['x'], axis=0) + 1e-10
-    # abs_max = np.max(np.abs(train['x'] - mean))
+    mean = np.average(train['x'], axis=0)
+    abs_max = np.max(np.abs(train['x'] - mean))
 
     # normalize
-    # train['x'] = (train['x'] - mean) / abs_max
-    # valid['x'] = (valid['x'] - mean) / abs_max
+    train['x'] = (train['x'] - mean) / abs_max
+    valid['x'] = (valid['x'] - mean) / abs_max
     # test['x'] = (test['x'] - mean) / std
-    
+
+    with open(args.mean_max_file, 'wb') as f:
+        pickle.dump({'mean': mean, 'max': abs_max}, f)
+
     
     # transform
     # train['x'] = transform(train['x'])
     # valid['x'] = transform(valid['x'])
     # test['x'] = transform(test['x'])
 
-    
-    classifier = CNNModel(eta=args.eta,
-                         n_iter=args.n_iter, batch_size=args.batch_size)
+    classifier = CNNModel(eta=args.eta, eta_decay=args.eta_decay,
+                          n_iter=args.n_iter, batch_size=args.batch_size)
 
     classifier.fit(train['x'], train['y'], valid)
-    classifier.save()
+    classifier.save(args.n_iter)
     classifier.dump_history()
     train['y_'] = classifier.predict(train['x'])
     print('accuracy train:', accuracy(train['y_'], train['y']))
