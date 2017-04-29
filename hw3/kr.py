@@ -82,10 +82,10 @@ class CNNModel:
         self.model.add(LeakyReLU())
         self.model.add(Dropout(0.5))
 
-        # self.model.add(Dense(256))
-        # self.model.add(BatchNormalization())
-        # self.model.add(LeakyReLU())
-        # self.model.add(Dropout(0.1))
+        self.model.add(Dense(256))
+        self.model.add(BatchNormalization())
+        self.model.add(LeakyReLU())
+        self.model.add(Dropout(0.1))
 
         self.model.add(Dense(self.n_classes))
         self.model.add(Activation('softmax'))
@@ -121,7 +121,7 @@ class CNNModel:
         if path is None:
             path = self.save_path
 
-        os.mkdir(path)
+        os.makedirs(path, exist_ok=True)
         self.model.save(os.path.join(path, 'model-%d.h5' % n_iter))
 
     def fit(self, X, y, valid):
@@ -152,7 +152,7 @@ class CNNModel:
             self.model.fit_generator(datagen_flow,
                                      steps_per_epoch=len(X) / self.batch_size,
                                      initial_epoch=i * 100,
-                                     epochs=100,
+                                     epochs=(i + 1) * 100,
                                      validation_data=valid,
                                      callbacks=[self.history])
             self.save(i)
@@ -160,7 +160,7 @@ class CNNModel:
         self.model.fit_generator(datagen_flow,
                                  steps_per_epoch=len(X) / self.batch_size,
                                  initial_epoch=i * 100,
-                                 epochs=self.n_iter % 100,
+                                 epochs=self.n_iter,
                                  validation_data=valid,
                                  callbacks=[self.history])
 
