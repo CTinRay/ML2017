@@ -3,7 +3,7 @@ import os
 import time
 import numpy as np
 from keras.callbacks import Callback
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.layers import Input, Dense, Dropout, Flatten, Activation
 from keras.layers.convolutional import Conv2D
 from keras.layers.pooling import MaxPooling2D, AveragePooling2D
@@ -73,7 +73,7 @@ class CNNModel:
         self.model.add(BatchNormalization(momentum=0.5))
         self.model.add(LeakyReLU())
         self.model.add(MaxPooling2D())
-        self.model.add(Dropout(0.1))
+        self.model.add(Dropout(0.2))
 
         # Fully connected part
         self.model.add(Flatten())
@@ -117,6 +117,13 @@ class CNNModel:
         config.gpu_options.per_process_gpu_memory_fraction = 0.4
         set_session(tf.Session(config=config))
 
+    def load(self, filename):
+        self.model = load_model(filename)
+
+    def predict(self, X):
+        return np.argmax(self.model.predict(X.reshape(-1, 48, 48, 1)),
+                         axis=1)
+        
     def save(self, n_iter, path=None):
         if path is None:
             path = self.save_path
