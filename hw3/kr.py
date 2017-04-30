@@ -43,7 +43,7 @@ class CNNModel:
                               padding='same',
                               input_shape=(48, 48, 1)))
         # kernel_regularizer=regularizers.l2(1e-9)))
-        self.model.add(BatchNormalization())
+        self.model.add(BatchNormalization(momentum=0.5))
         self.model.add(LeakyReLU())
         self.model.add(MaxPooling2D())
         # self.model.add(Dropout(0.1))
@@ -53,7 +53,7 @@ class CNNModel:
         self.model.add(Conv2D(64, (3, 3),
                               padding='same'))
         # kernel_regularizer=regularizers.l2(1e-9)))
-        self.model.add(BatchNormalization())
+        self.model.add(BatchNormalization(momentum=0.5))
         self.model.add(LeakyReLU())
         self.model.add(MaxPooling2D())
         self.model.add(Dropout(0.1))
@@ -62,7 +62,7 @@ class CNNModel:
         self.model.add(Conv2D(128, (3, 3),
                               padding='same'))
         # kernel_regularizer=regularizers.l2(1e-9)))
-        self.model.add(BatchNormalization())
+        self.model.add(BatchNormalization(momentum=0.5))
         self.model.add(LeakyReLU())
         self.model.add(MaxPooling2D())
         self.model.add(Dropout(0.2))
@@ -70,7 +70,7 @@ class CNNModel:
         # 6 x 6
         self.model.add(Conv2D(256, (3, 3),
                               padding='same'))
-        self.model.add(BatchNormalization())
+        self.model.add(BatchNormalization(momentum=0.5))
         self.model.add(LeakyReLU())
         self.model.add(MaxPooling2D())
         self.model.add(Dropout(0.1))
@@ -78,12 +78,12 @@ class CNNModel:
         # Fully connected part
         self.model.add(Flatten())
         self.model.add(Dense(512))
-        self.model.add(BatchNormalization())
+        self.model.add(BatchNormalization(momentum=0.5))
         self.model.add(LeakyReLU())
         self.model.add(Dropout(0.5))
 
         self.model.add(Dense(256))
-        self.model.add(BatchNormalization())
+        self.model.add(BatchNormalization(momentum=0.5))
         self.model.add(LeakyReLU())
         self.model.add(Dropout(0.1))
 
@@ -124,6 +124,23 @@ class CNNModel:
         os.makedirs(path, exist_ok=True)
         self.model.save(os.path.join(path, 'model-%d.h5' % n_iter))
 
+    def dump_history(self, n_iter, path=None):
+        if path is None:
+            path = self.save_path
+
+        with open(os.path.join(path, 'train_loss-%d' % n_iter), 'a') as f:
+            for loss in self.history.tr_losses:
+                f.write('{}\n'.format(loss))
+        with open(os.path.join(path, 'train_accuracy-%d' % n_iter), 'a') as f:
+            for acc in self.history.tr_accs:
+                f.write('{}\n'.format(acc))
+        with open(os.path.join(path, 'valid_loss-%d' % n_iter), 'a') as f:
+            for loss in self.history.val_losses:
+                f.write('{}\n'.format(loss))
+        with open(os.path.join(path, 'valid_accuracy-%d' % n_iter), 'a') as f:
+            for acc in self.history.val_accs:
+                f.write('{}\n'.format(acc))
+
     def fit(self, X, y, valid):
         self._build_model()
         self.history = self.History()
@@ -155,7 +172,8 @@ class CNNModel:
                                      epochs=(i + 1) * 100,
                                      validation_data=valid,
                                      callbacks=[self.history])
-            self.save(i)
+            self.save(i * 100)
+            self.dump_history(i * 100)
 
         self.model.fit_generator(datagen_flow,
                                  steps_per_epoch=len(X) / self.batch_size,
@@ -169,20 +187,3 @@ class CNNModel:
         #                epochs=self.n_iter,
         #                validation_data=valid,
         #                callbacks=[self.history])
-
-    def dump_history(self, path=None):
-        if path is None:
-            path = self.save_path
-
-        with open(os.path.join(path, 'train_loss'), 'a') as f:
-            for loss in self.history.tr_losses:
-                f.write('{}\n'.format(loss))
-        with open(os.path.join(path, 'train_accuracy'), 'a') as f:
-            for acc in self.history.tr_accs:
-                f.write('{}\n'.format(acc))
-        with open(os.path.join(path, 'valid_loss'), 'a') as f:
-            for loss in self.history.val_losses:
-                f.write('{}\n'.format(loss))
-        with open(os.path.join(path, 'valid_accuracy'), 'a') as f:
-            for acc in self.history.val_accs:
-                f.write('{}\n'.format(acc))
