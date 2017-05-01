@@ -42,7 +42,7 @@
 
 \subsubsection*{Image Preprocess}
 
-First center the image pixelwise so each pixel has zero mean. Then divide each pixel with maximum absolute value among all pixels, so all value of all the pixels are within [-1, 1].
+First center the image pixelwise so each pixel has zero mean. Then divide each pixel with maximum absolute value among all pixels, so all value of all the pixels are within [-1, 1] \cite{cs221_project}.
 
 \subsubsection*{CNN Structure}
 
@@ -111,7 +111,7 @@ Optimizer Adam is used, with learning rate 0.001, decay 0.00005.
 
 The same structure without image augmentation is also tried. As shown below, it overfit severely start from about 10 epochs. Therefore, image augmentation is necessary to get higher accuracy.
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \begin{subfigure}{.5\textwidth}
   \centering
@@ -150,6 +150,7 @@ To compare with CNN model, I built a DNN model with same number of layers and ap
 \item Dropout with drop rate 0.1.
 \item Dense (7), followed by activation function softmax.
 \end{itemize}
+
 There are 1974791 trainable parameters, while for CNN model, there are 1703623 parameters.
 
 As shown in figure 3, it is very hard for the DNN model to fit. Even after 1000 epochs, the training loss and accuracy still can hardly catch up with validation. In comparison, for the CNN model, the training loss gets lower than validation loss start from about 210 epochs. If the accuracy is compared, apparently CNN model is much more powerful. 
@@ -182,12 +183,13 @@ As shown in figure 3, it is very hard for the DNN model to fit. Even after 1000 
 \label{fig:confusion}
 \end{figure}
 
+As shown in Figure \ref{fig:confusion}, happy is the most easy facial expression to identify for the model, while fear is the most difficult. Also, 23\% of sad exporession is identify as neutral. That may implies that the facial expression of sad is not very apparent. Meanwhile, negative facial expressions, such as angry, disgust, fear tend to be classified to sad.
 
 \subsection*{P4: Analyze the Model by Plotting the Saliency Map}
 
 The figures below are the saliency map of my CNN on figure 4 in the test data set. The heatmap is generate by calculating absolute value of gradient. From the image where low heat pixels are removed, we can identify the facial expression easily. Also, most part of the mouth is preserved. Therefore, the shape of mouth should be a important feature for the model to distinguish facial expression.
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \begin{subfigure}{.33\textwidth}
   \centering
@@ -247,9 +249,10 @@ The second layer of another model, referred as dlsvm, proposed by the winner of 
 \clearpage
 
 \begin{thebibliography}{99}
+\bibitem{cs221_project} 
+Mo, Kaichun, Yang, Yuxin, Zhang, Yun. CS  221  Project  Final  Report:  Facial  Expression  Automatic  Recognition. http://www.cs.stanford.edu/~kaichun/resume/cs221\_project\_report.pdf
 \bibitem{dlsvm} 
 Yichuan Tang. Deep Learning using Linear Support Vector Machines.  
 \end{thebibliography}
-
 
 \end{document}
