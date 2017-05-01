@@ -2,9 +2,9 @@ import pickle
 import numpy as np
 import pandas as pd
 import argparse
-import pdb
-import sys
-import traceback
+# import pdb
+# import sys
+# import traceback
 from kr import CNNModel
 
 

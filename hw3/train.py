@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
 import argparse
-import pdb
-import sys
-import traceback
+# import pdb
+# import sys
+# import traceback
 import pickle
 from kr import CNNModel
 
@@ -137,13 +137,13 @@ def main():
     classifier.fit(train['x'], train['y'], valid)
     classifier.save(args.n_iter)
     classifier.dump_history()
-    train['y_'] = classifier.predict(train['x'])
-    print('accuracy train:', accuracy(train['y_'], train['y']))
+    # train['y_'] = classifier.predict(train['x'])
+    # print('accuracy train:', accuracy(train['y_'], train['y']))
 
-    valid['y_'] = classifier.predict(valid['x'])
-    print('accuracy valid:', accuracy(valid['y_'], valid['y']))
+    # valid['y_'] = classifier.predict(valid['x'])
+    # print('accuracy valid:', accuracy(valid['y_'], valid['y']))
 
-    pdb.set_trace()
+    # pdb.set_trace()
     # test['y_'] = classifier.predict(test['x'])
     # write_csv(test['y_'], args.out)
 
