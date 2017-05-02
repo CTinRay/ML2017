@@ -38,12 +38,18 @@ def pca(imgs):
     return eigen_val, eigen_vec
 
 
-def p1(img_subjects, filename_avg_face, filename_eigen_faces):
+def p1(img_subjects,
+       filename_avg_face, filename_eigen_faces,
+       filename_projected_faces):
     first_10 = []
     for s in range(10):
         first_10.append(img_subjects[s][:10])
 
     first_10 = np.concatenate(first_10, axis=0)
+    mean = np.mean(first_10)
+    std = np.std(first_10)
+    first_10 = (first_10 - mean) / std
+    
     _, eigen_faces = pca(first_10)
 
     avg_face = np.mean(first_10, axis=0)
@@ -54,12 +60,35 @@ def p1(img_subjects, filename_avg_face, filename_eigen_faces):
     fig = plt.figure(dpi=300)
     for i in range(9):
         ax = fig.add_subplot(3, 3, i + 1)
-        ax.imshow(eigen_faces[:, -1 - i].reshape(64, 64), cmap=plt.cm.gray)
+        img = eigen_faces[:, -1 - i].reshape(64, 64)
+        img = img * std + mean
+        ax.imshow(img, cmap=plt.cm.gray)
         plt.xticks(np.array([]))
         plt.yticks(np.array([]))
 
     fig.savefig(filename_eigen_faces)
-    
+
+    # project imgs to eigen faces
+    projected_imgs = []
+    for img in first_10:
+        projected = np.zeros(64 * 64)
+        # pdb.set_trace()
+        for e in range(5):
+            inner = img @ eigen_faces[:, -1 - e]
+            projected += inner * eigen_faces[:, -1 - e]
+
+        projected = projected * std + mean
+        projected_imgs.append(projected)
+
+    fig = plt.figure(dpi=300)
+    for i in range(100):
+        ax = fig.add_subplot(10, 10, i + 1)
+        ax.imshow(projected_imgs[i].reshape(64, 64), cmap=plt.cm.gray)
+        plt.xticks(np.array([]))
+        plt.yticks(np.array([]))
+
+    fig.savefig(filename_projected_faces)
+
 
 def main():
     parser = argparse.ArgumentParser(description='ML HW4: PCA')
@@ -72,9 +101,8 @@ def main():
 
     p1(img_subjects,
        os.path.join(args.path, 'avg-face.png'),
-       os.path.join(args.path, 'eigen-faces.png'))
-
-    
+       os.path.join(args.path, 'eigen-faces.png'),
+       os.path.join(args.path, 'projected-faces.png'))
 
 
 if __name__ == '__main__':
