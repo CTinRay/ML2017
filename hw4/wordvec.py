@@ -73,7 +73,7 @@ def main():
     d2 *= 100
     print('finish tsne')    
     
-    fig = plt.figure(20, 20, dpi=300)
+    fig = plt.figure(figsize=(20, 20), dpi=300)
     ax = fig.add_subplot(1, 1, 1)
     for tag in tags_to_show:
         inds = np.where(tags == tag)[0]
