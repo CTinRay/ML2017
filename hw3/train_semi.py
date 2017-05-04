@@ -143,9 +143,9 @@ def main():
     classifier = CNNModel(eta=args.eta, eta_decay=args.eta_decay,
                           n_iter=args.n_iter, batch_size=args.batch_size)
 
-    # classifier.load(args.model)
+    classifier.load(args.model)
 
-    classifier.fit(train['x'], train['y'], valid, 0, 500)
+    # classifier.fit(train['x'], train['y'], valid, 0, 500)
     
     valid['y_'] = classifier.predict(valid['x'])
     print('accuracy:', accuracy(valid['y_'], valid['y']))
@@ -164,13 +164,13 @@ def main():
         # pdb.set_trace()
         # add those of top 10 confidence to train
         add_size = test['x'].shape[0] // 10
-        train['x'] = np.concatenate([train['x'], test['x'][add_size:]],
+        train['x'] = np.concatenate([train['x'], test['x'][-add_size:]],
                                     axis=0)
-        train['y'] = np.concatenate([train['y'], test['y_'][add_size:]],
+        train['y'] = np.concatenate([train['y'], test['y_'][-add_size:]],
                                     axis=0)
 
         # remove added from test data
-        test['x'] = test['x'][:add_size]
+        test['x'] = test['x'][:-add_size]
 
         # shuffle training data again
         inds = np.arange(train['x'].shape[0])
@@ -178,8 +178,8 @@ def main():
         train['x'] = train['x'][inds]
         train['y'] = train['y'][inds]
 
-        classifier.fit(train['x'], train['y'], valid, 1000 + i * 100)
-        classifier.dump_history(1000 + i * 100)
+        classifier.fit(train['x'], train['y'], valid, 500 + i * 50, 50)
+        # classifier.dump_history(500 + i * 50)
 
 
     # classifier.save(args.n_iter)
