@@ -107,7 +107,7 @@ def main():
     args = parser.parse_args()
     raw_train = get_XY(args.train)
 
-    train, valid = split_valid(raw_train, args.valid_ratio)
+    train, valid = split_valid(raw_train, args.valid_ratio, args.valid_file)
     # test = {'x': get_X(args.x_test)}
 
     # do data augmentation
