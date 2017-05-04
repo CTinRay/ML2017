@@ -116,6 +116,7 @@ class CNNModel:
         config = tf.ConfigProto()
         config.gpu_options.per_process_gpu_memory_fraction = 0.4
         set_session(tf.Session(config=config))
+        self.model = None
 
     def load(self, filename):
         self.model = load_model(filename)
@@ -138,6 +139,7 @@ class CNNModel:
         if path is None:
             path = self.save_path
 
+        os.makedirs(path, exist_ok=True)
         with open(os.path.join(path, 'train_loss-%d' % n_iter), 'a') as f:
             for loss in self.history.tr_losses:
                 f.write('{}\n'.format(loss))
@@ -152,7 +154,9 @@ class CNNModel:
                 f.write('{}\n'.format(acc))
 
     def fit(self, X, y, valid, start_iter=0, n_iter=100):
-        self._build_model()
+        if self.model is None:
+            self._build_model()
+            
         self.history = self.History()
         X = X.reshape(-1, 48, 48, 1)
         y = self._one_hot_encode(y)

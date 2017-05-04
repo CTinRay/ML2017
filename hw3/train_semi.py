@@ -143,7 +143,10 @@ def main():
     classifier = CNNModel(eta=args.eta, eta_decay=args.eta_decay,
                           n_iter=args.n_iter, batch_size=args.batch_size)
 
-    classifier.load(args.model)
+    # classifier.load(args.model)
+
+    classifier.fit(train['x'], train['y'], valid, 0, 500)
+    
     valid['y_'] = classifier.predict(valid['x'])
     print('accuracy:', accuracy(valid['y_'], valid['y']))
     
@@ -176,7 +179,8 @@ def main():
         train['y'] = train['y'][inds]
 
         classifier.fit(train['x'], train['y'], valid, 1000 + i * 100)
-        
+        classifier.dump_history(1000 + i * 100)
+
 
     # classifier.save(args.n_iter)
     classifier.dump_history()
