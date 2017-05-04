@@ -183,7 +183,7 @@ As shown in figure 3, it is very hard for the DNN model to fit. Even after 1000 
 \label{fig:confusion}
 \end{figure}
 
-As shown in Figure \ref{fig:confusion}, happy is the most easy facial expression to identify for the model, while fear is the most difficult. Also, 23\% of sad expressions is identify as neutral. That may implies that the facial expression of sad is not very apparent. Meanwhile, negative facial expressions, such as angry, disgust, fear tend to be classified to sad.
+As shown in Figure \ref{fig:confusion}, happy is the most easy facial expression to identify for the model, while fear is the most difficult. Also, 25\% of sad expressions is identify as neutral. That may implies that the facial expression of sad is not very apparent. 
 
 \subsection*{P4: Analyze the Model by Plotting the Saliency Map}
 
@@ -223,14 +223,14 @@ From the images that activate the filters most, we can barely find any informati
 The second layer of another model, referred as dlsvm, proposed by the winner of FER 2013 \cite{dlsvm}, can be compared here. For this model I can only tune to about 65\% accuracy. As shown in figure, some filters, such as filter 26, are also trying to mark those organs. However, apparently its filters preserve less features and less delicate. That may be reasonable since it has less number of layers.
 
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{report-imgs/filter-output.png}
   \caption{Output of filters in layer 2}
   \label{fig:Output of filters in layer 2}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{report-imgs/filter-visualize.png}
   \caption{Visualization of filters in layer 2}
@@ -238,11 +238,43 @@ The second layer of another model, referred as dlsvm, proposed by the winner of 
 \end{figure}
 
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{report-imgs/dlsvm-filter-output.png}
   \caption{DLSVM: Output of filters in layer 2}
   \label{fig:Output of filters in layer 2}
+\end{figure}
+
+
+\subsection*{Bonus: Semi-supervied Learning}
+
+Semi-supervised learning was also tried. The training procedure is bellow.
+
+\begin{itemize}
+\item Split 10\% validation data from training data.
+\item Train the model with the 90\% data remained for 600 epochs.
+\item Predict on test data. Pick top 10\% most confident prediction from test data and merge them into training data. Fit for 50 epochs.
+\item Repeat the step above for 10 times.
+\end{itemize}
+
+As shown in figure \ref{fig:semi}, as test data is added, training accuracy increases faster and training loss drop faster too. Also, valid accuracy drops a little bit, while valid loss oscillates severely. Overall, the performance did not differ much compared with the original one.
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{report-imgs/semi-accuracy.png}
+  \caption{Accuracy}
+  \label{fig:sub1}
+\end{subfigure}%
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{report-imgs/semi-loss.png}
+  \caption{Loss}
+  \label{fig:sub2}
+\end{subfigure}
+\caption{Training Procedure}
+\label{fig:semi}
 \end{figure}
 
 
