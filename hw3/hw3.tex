@@ -55,7 +55,7 @@ The final structure of my CNN is
   Image Augmentation (48, 48, 1): Augmentate images in batch by randomly
   \begin{itemize}
   \item rotating in (-30, 30) degrees.
-  \item filping horizontally.
+  \item flipping horizontally.
   \item shifting horizontally and vertically in (-4.8, 4.8) pixels.
   \item zooming by (0.8, 1.2)
   \end{itemize}
@@ -136,7 +136,7 @@ To compare with CNN model, I built a DNN model with same number of layers and ap
 
 \begin{itemize}
 \item Input (48, 48, 1)
-\item Flattern (2304)
+\item Flatten (2304)
 \item Dense (512), followed by batch normalization and leaky ReLU.
 \item Dense (512), followed by batch normalization and leaky ReLU.
 \item Dropout with drop rate 0.1.
@@ -183,7 +183,7 @@ As shown in figure 3, it is very hard for the DNN model to fit. Even after 1000 
 \label{fig:confusion}
 \end{figure}
 
-As shown in Figure \ref{fig:confusion}, happy is the most easy facial expression to identify for the model, while fear is the most difficult. Also, 23\% of sad exporession is identify as neutral. That may implies that the facial expression of sad is not very apparent. Meanwhile, negative facial expressions, such as angry, disgust, fear tend to be classified to sad.
+As shown in Figure \ref{fig:confusion}, happy is the most easy facial expression to identify for the model, while fear is the most difficult. Also, 23\% of sad expressions is identify as neutral. That may implies that the facial expression of sad is not very apparent. Meanwhile, negative facial expressions, such as angry, disgust, fear tend to be classified to sad.
 
 \subsection*{P4: Analyze the Model by Plotting the Saliency Map}
 
@@ -216,7 +216,7 @@ The figures below are the saliency map of my CNN on figure 4 in the test data se
 
 \subsection*{P5: Analyze the Model by Visualizing Filters}
 
-Following images are the output of filters in layer 2 and images that activate those filters most. From the output of those filters, we can identify organs such as eye, eyebow, mouth. Thus those filters seem to try to mark those facial organs in different ways. Also, some filters seem to be complementary, such as filter 25 and 26, while some of them are very similar. The similarity between filters may imply that number of filters is more than necessary. However, those redundant filters may provides better ability to resist noise.
+Following images are the output of filters in layer 2 and images that activate those filters most. From the output of those filters, we can identify organs such as eye, eyebrow, mouth. Thus those filters seem to try to mark those facial organs in different ways. Also, some filters seem to be complementary, such as filter 25 and 26, while some of them are very similar. The similarity between filters may imply that number of filters is more than necessary. However, those redundant filters may provides better ability to resist noise.
 
 From the images that activate the filters most, we can barely find any information. The reason may be that, those filters are to find more subtle features of part of organs, while they are too obscure to our human beings.
 

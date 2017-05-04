@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
 import argparse
-# import pdb
-# import sys
-# import traceback
+import pdb
+import sys
+import traceback
 import pickle
-from kr import CNNModel
+from kr_semi import CNNModel
 
 
 def get_X(csv):
@@ -34,21 +34,18 @@ def get_XY(csv):
     return {'x': np.array(xs), 'y': np.array(ys)}
 
 
-def split_valid(raw, valid_ratio, filename=None):
+def split_valid_from_ind(raw, filename):
     n_rows = raw['x'].shape[0]
 
     # shuffle data
-    inds = np.arange(n_rows)
-    np.random.shuffle(inds)
+    with open(filename, 'rb') as f:
+        inds = pickle.load(f)
+
     raw['x'] = raw['x'][inds]
     raw['y'] = raw['y'][inds]
 
-    if filename is not None:
-        with open(filename, 'wb') as f:
-            pickle.dump(inds, f)
-
     # split data
-    n_valid = int(n_rows * valid_ratio)
+    n_valid = int(n_rows * 0.1)
     train_data = {'x': raw['x'][n_valid:], 'y': raw['y'][n_valid:]}
     valid_data = {'x': raw['x'][:n_valid], 'y': raw['y'][:n_valid]}
 
@@ -68,6 +65,17 @@ def write_csv(y, filename):
     f.close()
 
 
+def get_test(csv):
+    xs = []
+    with open(csv) as f:
+        f.readline()
+        for l in f:
+            cols = l.split(',')
+            xs.append(list(map(int, cols[1].split())))
+
+    return {'x': np.array(xs)}
+
+
 def transform(x):
     # x = x.reshape((-1, 48, 48))
     # x = x[:, 4:44, 4:44]
@@ -85,7 +93,9 @@ def augmentate(data):
 
 def main():
     parser = argparse.ArgumentParser(description='ML HW2')
+    parser.add_argument('model', type=str, help='model.h5')
     parser.add_argument('train', type=str, help='train.csv')
+    parser.add_argument('test', type=str, help='test.csv')
     parser.add_argument('out', type=str, help='outcome')
     parser.add_argument('--valid_ratio', type=float,
                         help='ratio of validation data', default=0.2)
@@ -107,8 +117,8 @@ def main():
     args = parser.parse_args()
     raw_train = get_XY(args.train)
 
-    train, valid = split_valid(raw_train, args.valid_ratio, args.valid_file)
-    # test = {'x': get_X(args.x_test)}
+    train, valid = split_valid_from_ind(raw_train, args.valid_file)
+    test = get_test(args.test)
 
     # do data augmentation
     # augmentate(train)
@@ -120,12 +130,11 @@ def main():
     # normalize
     train['x'] = (train['x'] - mean) / abs_max
     valid['x'] = (valid['x'] - mean) / abs_max
-    # test['x'] = (test['x'] - mean) / std
+    test['x'] = (test['x'] - mean) / abs_max
 
     with open(args.mean_max_file, 'wb') as f:
         pickle.dump({'mean': mean, 'max': abs_max}, f)
 
-    
     # transform
     # train['x'] = transform(train['x'])
     # valid['x'] = transform(valid['x'])
@@ -134,8 +143,46 @@ def main():
     classifier = CNNModel(eta=args.eta, eta_decay=args.eta_decay,
                           n_iter=args.n_iter, batch_size=args.batch_size)
 
-    classifier.fit(train['x'], train['y'], valid)
-    classifier.save(args.n_iter)
+    # classifier.load(args.model)
+
+    classifier.fit(train['x'], train['y'], valid, 0, 500)
+    
+    valid['y_'] = classifier.predict(valid['x'])
+    print('accuracy:', accuracy(valid['y_'], valid['y']))
+    
+    for i in range(10):
+        # get confidence of prediction on test
+        test['y_prob'] = classifier.predict_prob(test['x'])
+        test['y_'] = np.argmax(test['y_prob'], axis=1)
+        test['confidence'] = np.max(test['y_prob'], axis=1)
+
+        # sort test data by confidence
+        inds = np.argsort(test['confidence'])
+        test['x'] = test['x'][inds]
+        test['y_'] = test['y_'][inds]
+
+        # pdb.set_trace()
+        # add those of top 10 confidence to train
+        add_size = test['x'].shape[0] // 10
+        train['x'] = np.concatenate([train['x'], test['x'][add_size:]],
+                                    axis=0)
+        train['y'] = np.concatenate([train['y'], test['y_'][add_size:]],
+                                    axis=0)
+
+        # remove added from test data
+        test['x'] = test['x'][:add_size]
+
+        # shuffle training data again
+        inds = np.arange(train['x'].shape[0])
+        np.random.shuffle(inds)
+        train['x'] = train['x'][inds]
+        train['y'] = train['y'][inds]
+
+        classifier.fit(train['x'], train['y'], valid, 1000 + i * 100)
+        classifier.dump_history(1000 + i * 100)
+
+
+    # classifier.save(args.n_iter)
     classifier.dump_history()
     # train['y_'] = classifier.predict(train['x'])
     # print('accuracy train:', accuracy(train['y_'], train['y']))
