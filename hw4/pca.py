@@ -33,8 +33,12 @@ def merge_imgs(imgs_subject):
 
 def pca(imgs):
     imgs = imgs - np.mean(imgs, axis=0)
-    covar = (imgs.T @ imgs) / imgs.shape[0]
-    eigen_val, eigen_vec = np.linalg.eigh(covar)
+    u, s, v = np.linalg.svd(imgs)
+    eigen_val = s ** 2
+    eigen_vec = v.T
+    inds = np.argsort(eigen_val)
+    eigen_val = eigen_val[inds]
+    eigen_vec = eigen_vec[:, inds]
     return eigen_val, eigen_vec
 
 
@@ -47,8 +51,9 @@ def p1(img_subjects,
 
     first_10 = np.concatenate(first_10, axis=0)
     mean = np.mean(first_10)
-    std = np.std(first_10)
-    first_10 = (first_10 - mean) / std
+    # std = np.std(first_10)
+    # first_10 = (first_10 - mean) / std
+    first_10 = (first_10 - mean)
     
     _, eigen_faces = pca(first_10)
 
@@ -61,7 +66,8 @@ def p1(img_subjects,
     for i in range(9):
         ax = fig.add_subplot(3, 3, i + 1)
         img = eigen_faces[:, -1 - i].reshape(64, 64)
-        img = img * std + mean
+        # img = img * std + mean
+        img = img + mean
         ax.imshow(img, cmap=plt.cm.gray)
         plt.xticks(np.array([]))
         plt.yticks(np.array([]))
@@ -77,7 +83,7 @@ def p1(img_subjects,
             inner = img @ eigen_faces[:, -1 - e]
             projected += inner * eigen_faces[:, -1 - e]
 
-        projected = projected * std + mean
+        # projected = projected * std + mean
         projected_imgs.append(projected)
 
     fig = plt.figure(dpi=300)
