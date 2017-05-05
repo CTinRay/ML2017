@@ -42,6 +42,11 @@ def pca(imgs):
     return eigen_val, eigen_vec
 
 
+def rmse(x_, x):
+    n = x.shape[0]
+    return np.sqrt(np.sum((x_ - x) ** 2) / n)
+
+
 def p1(img_subjects,
        filename_avg_face, filename_eigen_faces,
        filename_projected_faces):
@@ -54,7 +59,7 @@ def p1(img_subjects,
     # std = np.std(first_10)
     # first_10 = (first_10 - mean) / std
     first_10 = (first_10 - mean)
-    
+
     _, eigen_faces = pca(first_10)
 
     avg_face = np.mean(first_10, axis=0)
@@ -75,16 +80,10 @@ def p1(img_subjects,
     fig.savefig(filename_eigen_faces)
 
     # project imgs to eigen faces
-    projected_imgs = []
-    for img in first_10:
-        projected = np.zeros(64 * 64)
-        # pdb.set_trace()
-        for e in range(5):
-            inner = img @ eigen_faces[:, -1 - e]
-            projected += inner * eigen_faces[:, -1 - e]
-
-        # projected = projected * std + mean
-        projected_imgs.append(projected)
+    projected_imgs = np.zeros([100, 64 * 64])
+    for e in range(5):
+        inner = first_10 @ eigen_faces[:, -1 - e]
+        projected_imgs += inner.reshape(-1, 1) * eigen_faces[:, -1 - e]
 
     fig = plt.figure(dpi=300)
     for i in range(100):
@@ -94,6 +93,8 @@ def p1(img_subjects,
         plt.yticks(np.array([]))
 
     fig.savefig(filename_projected_faces)
+
+    # rmse =
 
 
 def main():
