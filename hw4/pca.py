@@ -25,10 +25,9 @@ def load_imgs(dir):
     return img_subjects
 
 
-def merge_imgs(imgs_subject):
-    all_imgs = np.concatenate(imgs_subjects,
-                              axis=0)
-    return all_imgs
+def rmse(x_, x):
+    n = x.shape[0] * x.shape[1]
+    return np.sqrt(np.sum((x_ - x) ** 2) / n)
 
 
 def pca(imgs):
@@ -42,42 +41,34 @@ def pca(imgs):
     return eigen_val, eigen_vec
 
 
-def rmse(x_, x):
-    n = x.shape[0]
-    return np.sqrt(np.sum((x_ - x) ** 2) / n)
-
-
 def p1(img_subjects,
        filename_avg_face, filename_eigen_faces,
-       filename_projected_faces):
+       filename_orig_faces, filename_projected_faces):
     first_10 = []
     for s in range(10):
         first_10.append(img_subjects[s][:10])
 
     first_10 = np.concatenate(first_10, axis=0)
-    mean = np.mean(first_10)
+    avg_face = np.mean(first_10, axis=0)
     # std = np.std(first_10)
     # first_10 = (first_10 - mean) / std
-    first_10 = (first_10 - mean)
+    first_10 = (first_10 - avg_face)
 
     _, eigen_faces = pca(first_10)
 
-    avg_face = np.mean(first_10, axis=0)
     plt.imsave(filename_avg_face,
                avg_face.reshape(64, 64),
                cmap=plt.cm.gray)
 
-    fig = plt.figure(dpi=300)
+    fig = plt.figure(dpi=300, figsize=(3, 3))
     for i in range(9):
         ax = fig.add_subplot(3, 3, i + 1)
         img = eigen_faces[:, -1 - i].reshape(64, 64)
-        # img = img * std + mean
-        img = img + mean
-        ax.imshow(img, cmap=plt.cm.gray)
-        plt.xticks(np.array([]))
-        plt.yticks(np.array([]))
+        ax.axis("off")
+        ax.imshow(img, cmap=plt.cm.gray, aspect='auto')
 
-    fig.savefig(filename_eigen_faces)
+    fig.savefig(filename_eigen_faces,
+                bbox_inches='tight')
 
     # project imgs to eigen faces
     projected_imgs = np.zeros([100, 64 * 64])
@@ -85,16 +76,35 @@ def p1(img_subjects,
         inner = first_10 @ eigen_faces[:, -1 - e]
         projected_imgs += inner.reshape(-1, 1) * eigen_faces[:, -1 - e]
 
-    fig = plt.figure(dpi=300)
+    fig = plt.figure(dpi=300, figsize=(5, 5))
     for i in range(100):
         ax = fig.add_subplot(10, 10, i + 1)
-        ax.imshow(projected_imgs[i].reshape(64, 64), cmap=plt.cm.gray)
-        plt.xticks(np.array([]))
-        plt.yticks(np.array([]))
+        ax.axis("off")
+        ax.imshow((first_10[i] + avg_face).reshape(64, 64), cmap=plt.cm.gray)
 
-    fig.savefig(filename_projected_faces)
+    fig.savefig(filename_orig_faces,
+                bbox_inches='tight')
 
-    # rmse =
+    fig = plt.figure(dpi=300, figsize=(5, 5))
+    for i in range(100):
+        ax = fig.add_subplot(10, 10, i + 1)
+        ax.axis("off")
+        projected_img = projected_imgs[i] + avg_face
+        ax.imshow(projected_img.reshape(64, 64), cmap=plt.cm.gray)
+
+    fig.savefig(filename_projected_faces,
+                bbox_inches='tight')
+
+    k = 4
+    err = rmse(projected_imgs, first_10)
+    while err > 256 * 0.01:
+        k += 1
+        inner = first_10 @ eigen_faces[:, -1 - k]
+        projected_imgs += inner.reshape(-1, 1) * eigen_faces[:, -1 - k]
+        err = rmse(projected_imgs, first_10)
+        print('k = %d, err = %f' % (k + 1, err))
+
+    print('k = %d' % (k + 1))
 
 
 def main():
@@ -109,6 +119,7 @@ def main():
     p1(img_subjects,
        os.path.join(args.path, 'avg-face.png'),
        os.path.join(args.path, 'eigen-faces.png'),
+       os.path.join(args.path, 'orig-faces.png'),
        os.path.join(args.path, 'projected-faces.png'))
 
 
