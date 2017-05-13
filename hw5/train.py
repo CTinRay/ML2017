@@ -4,6 +4,10 @@ import argparse
 import pickle
 from utils import *
 from rnn import TextClassifier
+import os
+import pdb
+import sys
+import traceback
 
 
 def main():
@@ -15,7 +19,7 @@ def main():
                         default='preprocss_args.pickle',
                         help='pickle to store preprocess arguments')
     parser.add_argument('--valid_ratio', type=float,
-                        help='ratio of validation data.', default=float)
+                        help='ratio of validation data.', default=0.1)
     parser.add_argument('--glove', type=str,
                         help='glove wordvec file',
                         default='./data/glove.6B.100d.txt')
@@ -27,21 +31,22 @@ def main():
 
     # process tags
     tag_table = make_tag_table(train_data['tags'])
-    encode_tags(train, tag_table)
+    encode_tags(train_data, tag_table)
 
     # preprocess text
     tokenizer = make_tokenizer(train_data['text'] + test_data['text'])
-    encode_text(train, tokenizer)
+    encode_text(train_data, tokenizer)
 
     # load GloVe and make embedding matrix
     glove_dict = load_glove(args.glove)
-    embedding_matrix = make_embedding_matrix(tokenizer, golve_dict)
+    embedding_matrix = make_embedding_matrix(tokenizer, glove_dict)
 
     # save preprocess args
     with open(args.preprocess_args, 'wb') as f:
         preprocess_args = {'tag_table': tag_table,
                            'tokenizer': tokenizer,
-                           'max_len': train['xs'].shape[1]}
+                           'max_len': train_data['xs'].shape[1],
+                           'embedding_matrix': embedding_matrix}
         pickle.dump(preprocess_args, f)
 
     # split data
@@ -51,4 +56,11 @@ def main():
     classifier = TextClassifier(embedding_matrix=embedding_matrix)
     classifier.fit(train['text'], train['ys'], valid)
 
-    
+
+if __name__ == '__main__':
+    try:
+        main()
+    except:
+        type, value, tb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(tb)
