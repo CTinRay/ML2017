@@ -38,7 +38,7 @@
 \usepackage{float}
 
 \begin{document}
-\maketitle
+% \maketitle
 \thispagestyle{fancy}
 
 \subsection*{1.1. Dataset 中前 10 個人的前 10 張照片的平均臉和 PCA 得到的前 9 個 eigenfaces}
@@ -84,7 +84,7 @@
 
 \subsection*{1.3. Dataset 中前 10 個人的前 10 張照片投影到 top k eigenfaces 時就可以達到 < 1\% 的 reconstruction error}
 
-$k = 60$
+$k = 59$
 
 \subsection*{2.1. 使用 word2vec toolkit 的各個參數的值與其意義}
 
@@ -92,18 +92,18 @@ $k = 60$
 \item \textbf{size}: 最後訓練出來的詞向量的維度。使用預設值 100 。
 \item \textbf{window}: 訓練詞向量時，要考慮的前後詞彙的總數量加一。使用預設值 5 。
 \item \textbf{sample}: 減少取樣出現頻率大於這個參數的詞彙，以加快訓練速度。使用預設值 1e-3 。（雖然註解說預設值是 0 ，但原始碼裡預設是 1e-3 ）
-\item \textbf{hs}: 是否使用階層化的 softmax 以加快訓練速度。使用預設值 1 。
-\item \textbf{negative}: 在訓練時，取樣錯誤的詞彙以更新相關權重的取樣數量。較大的取樣數量可能會增加詞向量的品質，但會減慢訓練速度。使用預設值 5 。
+\item \textbf{hs}: 是否使用階層化的 softmax ，藉由樹狀的結構，先預測較大的類別再從該類別預測較小的類別，如此一來勳練時每次都只需要更新從根到正確預測所經過的節點，可以大幅增快訓練速度。使用預設值 1 。
+\item \textbf{negative}: 在訓練時，那些被取樣以更新相關權重的錯誤詞彙數量。較大的取樣數量可能會增加詞向量的品質，但會減慢訓練速度。使用預設值 5 。
 \item \textbf{min\_count}: 忽略出現次數少於此數量的詞彙。使用預設值 5 。
 \item \textbf{alpha}: 起始學習率。
-\item \textbf{cbow}: 是否使用 CBOW 的方式（0）或是 skip gram 的方式（1）訓練。使用預設值 1 。
+\item \textbf{cbow}: 是否使用 CBOW 的方式（0）或是 skip gram 的方式（1）訓練。使用預設值 1 。CBOW 的方式是從前後文預測中間的詞彙，而 skip gram 則是從中間的詞彙預測前後文。
 \end{itemize}
 
 \subsection*{2.2. 將 word2vec 的結果投影到 2 維的圖}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.6\linewidth]{tsne-cropped.png}
+\includegraphics[width=0.8\linewidth]{tsne-cropped.png}
 \caption{使用 tSNE 投影}
 \label{fig:p2.2}
 \end{figure}
@@ -126,7 +126,7 @@ $k = 60$
 
 \subsection*{3.2. 將你的方法做在 hand rotation sequence datatset 上得到什麼結果？合理嗎？請討論之。}
 
-
+結果得到 4 。此資料集的實際隱含維度估計應該是 3 ，因為該序列幾本上可以算是視角的是水平旋轉，因此所有圖片的集合可以對應到一個圓柱表面的座標系統，而其維度是 2；而每張圖片都對應到此圓柱表面的一個角度，所以總維度會是 2 + 1 。雖然 4 / 3 相對來說有點高，但相減的誤差而言，應該算是還可以接受。這也代表了此方法也許比想像中的通用一些。
 
 
 \end{document}
