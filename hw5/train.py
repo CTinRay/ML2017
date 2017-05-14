@@ -23,6 +23,12 @@ def main():
     parser.add_argument('--glove', type=str,
                         help='glove wordvec file',
                         default='./data/glove.6B.100d.txt')
+    parser.add_argument('--n_iters', type=int, default=100,
+                        help='number of epochs')
+    parser.add_argument('--lr', type=float, default=0.001,
+                        help='learning rate')
+    parser.add_argument('--batch_size', type=int, default=128,
+                        help='batch size')
     args = parser.parse_args()
 
     # read data
@@ -45,7 +51,7 @@ def main():
     with open(args.preprocess_args, 'wb') as f:
         preprocess_args = {'tag_table': tag_table,
                            'tokenizer': tokenizer,
-                           'max_len': train_data['xs'].shape[1],
+                           'max_len': train_data['x'].shape[1],
                            'embedding_matrix': embedding_matrix}
         pickle.dump(preprocess_args, f)
 
@@ -53,8 +59,11 @@ def main():
     train, valid = split_valid(train_data, args.valid_ratio)
 
     # start training
-    classifier = TextClassifier(embedding_matrix=embedding_matrix)
-    classifier.fit(train['text'], train['ys'], valid)
+    classifier = TextClassifier(len(tokenizer.word_index),
+                                embedding_matrix,
+                                n_iters=args.n_iters,
+                                lr=args.lr, batch_size=args.batch_size)
+    classifier.fit(train['x'], train['y'], valid)
 
 
 if __name__ == '__main__':
