@@ -45,35 +45,35 @@ def make_tokenizer(texts):
 
 def encode_text(data, tokenizer, max_len=None):
     sequences = tokenizer.texts_to_sequences(data['text'])
-    data['xs'] = pad_sequences(sequences)
+    data['x'] = pad_sequences(sequences)
 
 
 def encode_tags(data, tag_table):
     n_tags = len(tag_table)
-    data['ys'] = np.zeros((len(data['text']), n_tags))
+    data['y'] = np.zeros((len(data['text']), n_tags))
     for i in range(len(data['tags'])):
         for tag in data['tags'][i]:
             ind = tag_table.index(tag)
-            data['ys'][i][ind] = 1
+            data['y'][i][ind] = 1
 
-    data['ys'] = np.array(data['ys'])
+    data['y'] = np.array(data['y'])
 
 
 def decode_tags(data, tag_table):
     for i in range(len(data['tags'])):
         data['tags'][i] = [tag_table[i]
-                           for i in np.where(data['ys'][i] == 1)[0]]
+                           for i in np.where(data['y'][i] == 1)[0]]
 
 
 def split_valid(data, valid_ratio):
-    indices = np.arange(data['xs'].shape[0])
+    indices = np.arange(data['x'].shape[0])
     np.random.shuffle(indices)
-    data['xs'] = data['xs'][indices]
-    data['ys'] = data['ys'][indices]
+    data['x'] = data['x'][indices]
+    data['y'] = data['y'][indices]
 
-    n_valid = int(data['xs'].shape[0] * valid_ratio)
-    train = {'xs': data['xs'][n_valid:], 'ys': data['ys'][n_valid:]}
-    valid = {'xs': data['xs'][:n_valid], 'ys': data['ys'][:n_valid]}
+    n_valid = int(data['x'].shape[0] * valid_ratio)
+    train = {'x': data['x'][n_valid:], 'y': data['y'][n_valid:]}
+    valid = {'x': data['x'][:n_valid], 'y': data['y'][:n_valid]}
 
     return train, valid
 
