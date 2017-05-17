@@ -8,13 +8,14 @@ import os
 import pdb
 import sys
 import traceback
+from sklearn.metrics import f1_score
 
 
 def main():
     parser = argparse.ArgumentParser(description='ML HW4')
     parser.add_argument('train', type=str, help='train.csv')
     parser.add_argument('test', type=str, help='train.csv')
-    parser.add_argument('out', type=str, help='outcome')
+    parser.add_argument('model', type=str, help='model to save')
     parser.add_argument('--preprocess_args', type=str,
                         default='preprocss_args.pickle',
                         help='pickle to store preprocess arguments')
@@ -40,8 +41,9 @@ def main():
     encode_tags(train_data, tag_table)
 
     # preprocess text
-    tokenizer = make_tokenizer(train_data['text'] + test_data['text'])
-    encode_text(train_data, tokenizer)
+    tokenizer = make_tokenizer(train_data['text'] + test_data['text'],
+                               5000)    
+    encode_text(train_data, tokenizer, 300)
 
     # load GloVe and make embedding matrix
     glove_dict = load_glove(args.glove)
@@ -51,8 +53,8 @@ def main():
     with open(args.preprocess_args, 'wb') as f:
         preprocess_args = {'tag_table': tag_table,
                            'tokenizer': tokenizer,
-                           'max_len': train_data['x'].shape[1],
-                           'embedding_matrix': embedding_matrix}
+                           'max_len': train_data['x'].shape[1]}
+                           # 'embedding_matrix': embedding_matrix}
         pickle.dump(preprocess_args, f)
 
     # split data
@@ -64,6 +66,11 @@ def main():
                                 n_iters=args.n_iters,
                                 lr=args.lr, batch_size=args.batch_size)
     classifier.fit(train['x'], train['y'], valid)
+    valid['y_'] = classifier.predict(valid['x'])
+    print('f1 score =',
+          f1_score(valid['y'], valid['y_'],
+                   average='samples'))
+    classifier.save(args.model)
 
 
 if __name__ == '__main__':

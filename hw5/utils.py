@@ -3,26 +3,30 @@ import csv
 import random
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
+import pdb
+from stopwords import stopwords
 
 
 def read_train(filename):
     raw_data = {'text': [], 'tags': []}
-    with open(filename, errors='ignore') as f:
-        csv_reader = csv.reader(f)
-        for row in csv_reader:
-            tags = row[1].split(',')
+    with open(filename) as f:
+        next(f)
+        for row in f:
+            cols = row.split(',')
+            tags = cols[1].replace('"', '').split(' ')
             raw_data['tags'].append(tags)
-            raw_data['text'].append(row[2])
+            raw_data['text'].append(''.join(cols[2:]))
 
     return raw_data
 
 
 def read_test(filename):
     raw_data = {'text': []}
-    with open(filename, errors='ignore') as f:
-        csv_reader = csv.reader(f)
-        for row in csv_reader:
-            raw_data['text'].append(row[1])
+    with open(filename) as f:
+        next(f)
+        for row in f:
+            cols = row.split(',')
+            raw_data['text'].append(''.join(cols[1:]))
 
     return raw_data
 
@@ -37,15 +41,20 @@ def make_tag_table(data_tags):
     return tag_table
 
 
-def make_tokenizer(texts):
-    tokenizer = Tokenizer()
+def make_tokenizer(texts, n_words=None):
+    tokenizer = Tokenizer(num_words=n_words)
     tokenizer.fit_on_texts(texts)
     return tokenizer
 
 
 def encode_text(data, tokenizer, max_len=None):
     sequences = tokenizer.texts_to_sequences(data['text'])
-    data['x'] = pad_sequences(sequences)
+    stopwords_seq = tokenizer.texts_to_sequences(stopwords)
+    for i in range(len(sequences)):
+        sequences[i] = list(filter(lambda x: x not in stopwords_seq,
+                                   sequences[i]))
+
+    data['x'] = pad_sequences(sequences, maxlen=max_len)
 
 
 def encode_tags(data, tag_table):
@@ -59,10 +68,13 @@ def encode_tags(data, tag_table):
     data['y'] = np.array(data['y'])
 
 
-def decode_tags(data, tag_table):
-    for i in range(len(data['tags'])):
-        data['tags'][i] = [tag_table[i]
-                           for i in np.where(data['y'][i] == 1)[0]]
+def decode_tags(encoded_tags, tag_table):
+    tags = [[] for i in range(len(encoded_tags))]
+    for i in range(len(encoded_tags)):
+        tags[i] = [tag_table[i]
+                   for i in np.where(encoded_tags[i] == 1)[0]]
+
+    return tags
 
 
 def split_valid(data, valid_ratio):
@@ -99,3 +111,10 @@ def make_embedding_matrix(tokenizer, glove_dict):
             embedding_matrix[i] = glove_dict[word]
 
     return embedding_matrix
+
+
+def write_predict(tags, filename):
+    with open(filename, 'w') as f:
+        f.write('"id","tags"\n')
+        for i in range(len(tags)):
+            f.write('"%d","%s"\n' % (i, ' '.join(tags[i])))
