@@ -13,11 +13,11 @@ from sklearn.metrics import f1_score
 
 def main():
     parser = argparse.ArgumentParser(description='ML HW4')
-    parser.add_argument('train', type=str, help='train.csv')
-    parser.add_argument('test', type=str, help='train.csv')
+    parser.add_argument('data', type=str, help='data.pickle')
+    parser.add_argument('embedding', type=str, help='embedding.pickle')
     parser.add_argument('model', type=str, help='model to save')
     parser.add_argument('--preprocess_args', type=str,
-                        default='preprocss_args.pickle',
+                        default='preprocess_args.pickle',
                         help='pickle to store preprocess arguments')
     parser.add_argument('--valid_ratio', type=float,
                         help='ratio of validation data.', default=0.1)
@@ -32,33 +32,19 @@ def main():
                         help='batch size')
     args = parser.parse_args()
 
-    # read data
-    train_data = read_train(args.train)
-    test_data = read_test(args.test)
+    # load preprocess args
+    with open(args.preprocess_args, 'rb') as f:
+        preprocess_args = pickle.load(f)
+        tokenizer = preprocess_args['tokenizer']
 
-    # process tags
-    tag_table = make_tag_table(train_data['tags'])
-    encode_tags(train_data, tag_table)
+    with open(args.embedding, 'rb') as f:
+        embedding_matrix = pickle.load(f)
 
-    # preprocess text
-    tokenizer = make_tokenizer(train_data['text'] + test_data['text'],
-                               5000)    
-    encode_text(train_data, tokenizer, 300)
-
-    # load GloVe and make embedding matrix
-    glove_dict = load_glove(args.glove)
-    embedding_matrix = make_embedding_matrix(tokenizer, glove_dict)
-
-    # save preprocess args
-    with open(args.preprocess_args, 'wb') as f:
-        preprocess_args = {'tag_table': tag_table,
-                           'tokenizer': tokenizer,
-                           'max_len': train_data['x'].shape[1]}
-                           # 'embedding_matrix': embedding_matrix}
-        pickle.dump(preprocess_args, f)
-
-    # split data
-    train, valid = split_valid(train_data, args.valid_ratio)
+    # load data
+    with open(args.data, 'rb') as f:
+        data = pickle.load(f)
+        train = data['train']
+        valid = data['valid']
 
     # start training
     classifier = TextClassifier(len(tokenizer.word_index),
@@ -66,7 +52,7 @@ def main():
                                 n_iters=args.n_iters,
                                 lr=args.lr, batch_size=args.batch_size)
     classifier.fit(train['x'], train['y'], valid)
-    valid['y_'] = classifier.predict(valid['x'])
+    valid['y_'] = classifier.predict(valid['x'], 0.4)
     print('f1 score =',
           f1_score(valid['y'], valid['y_'],
                    average='samples'))
