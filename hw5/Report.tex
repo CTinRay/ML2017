@@ -1,0 +1,96 @@
+\documentclass[fleqn,a4paper,12pt]{article}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+
+
+\title{Machine Learning Homework 5}
+\date{}
+
+\setcounter{section}{0}
+
+\usepackage{listings}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+
+\usepackage{mathspec}
+\setmainfont{Noto Serif CJK TC}
+% \setmathsfont(Digits,Latin,Greek)[Numbers={Lining,Proportional}]{DejaVu Math TeX Gyre}
+\newfontfamily\ZhFont{Noto Serif CJK TC}
+\newfontfamily\SmallFont[Scale=0.8]{Droid Sans}
+% \newfontfamily\SmallSmallFont[Scale=0.7]{Noto Serif CJK}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{B03902072\ZhFont{江廷睿}}
+\lhead{Machine Learning Homework 4}
+\rfoot{\thepage / \pageref{LastPage}}
+
+\XeTeXlinebreaklocale "zh"
+\XeTeXlinebreakskip = 0pt plus 1pt
+\usepackage{parskip}
+
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+
+\begin{document}
+% \maketitle
+\thispagestyle{fancy}
+
+\section{(1\%)請問softmax適不適合作為本次作業的output layer? 寫出你最後選擇的output layer並說明理由。}
+\section{(1\%)請設計實驗驗證上述推論}
+\section{(1\%)請試著分析tags的分布情況(數量)}
+
+\begin{tabular}{| l | c | r |}
+  AUTOBIOGRAPHICAL-NOVEL & 31 \\
+  DETECTIVE-FICTION & 178 \\
+  WAR-NOVEL & 31 \\
+  NOVELLA & 29 \\
+  NON-FICTION & 102 \\
+  CHILDREN'S-LITERATURE & 777 \\
+  HISTORICAL-FICTION & 137 \\
+  SUSPENSE & 318 \\
+  GOTHIC-FICTION & 12 \\
+  ROMANCE-NOVEL & 157 \\
+  HIGH-FANTASY & 15 \\
+  HORROR & 192 \\
+  CRIME-FICTION & 368 \\
+  TECHNO-THRILLER & 18 \\
+  ADVENTURE-NOVEL & 109 \\
+  DYSTOPIA & 30 \\
+  AUTOBIOGRAPHY & 51 \\
+  COMIC-NOVEL & 37 \\
+  ALTERNATE-HISTORY & 72 \\
+  UTOPIAN-AND-DYSTOPIAN-FICTION & 11 \\
+  HISTORY & 40 \\
+  NOVEL & 992 \\
+  SPECULATIVE-FICTION & 1448 \\
+  MEMOIR & 35 \\
+  THRILLER & 243 \\
+  SHORT-STORY & 41 \\
+  MYSTERY & 642 \\
+  APOCALYPTIC-AND-POST-APOCALYPTIC-FICTION & 14 \\
+  SCIENCE-FICTION & 959 \\
+  HUMOUR & 18 \\
+  SPY-FICTION & 75 \\
+  FICTION & 1672 \\
+  YOUNG-ADULT-LITERATURE & 288 \\
+  BIOGRAPHY & 42 \\
+  FANTASY & 773 \\
+  COMEDY & 59 \\
+  HISTORICAL-NOVEL & 222 \\
+  SATIRE & 35 \\
+\end{tabular}
+
+\section{(1\%)本次作業中使用何種方式得到word embedding?請簡單描述做法。}
+
+使用 GloVe 已經事先用 Wikipedia 2014 + Gigaword 5 訓練好的 100 維資料。 GloVe 的訓練方式是先統計詞彙跟詞彙同時出現次數，計算出一個詞彙出現在另一詞彙的上下文的條件機率，並將這些機率寫成一個矩陣。然後再使用矩陣分解的方式，找出能最小化兩詞彙內積與前述的條件機率之誤差的向量表示法，即得到詞彙們的向量。
+
+\section{(1\%)試比較bag of word和RNN何者在本次作業中效果較好。}
+
+
+\end{document}
