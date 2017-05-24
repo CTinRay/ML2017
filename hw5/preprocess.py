@@ -1,3 +1,4 @@
+from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
 import numpy as np
 import pandas as pd
 import argparse
@@ -42,8 +43,20 @@ def main():
     encode_tags(train_data, tag_table)
 
     # preprocess text
-    tokenizer = make_tokenizer(train_data['text'] + test_data['text'])    
+    tokenizer = make_tokenizer(train_data['text'] + test_data['text'])
     encode_text(train_data, tokenizer)
+
+    # preprocess text
+    vectorizer = CountVectorizer(min_df=1, stop_words='english')
+    vectorizer.fit(train_data['text'] + test_data['text'])
+    train_data['count'] = vectorizer.transform(train_data['text']).toarray()
+    test_data['count'] = vectorizer.transform(test_data['text']).toarray()
+
+    transformer = TfidfTransformer(smooth_idf=False)
+    transformer.fit(np.concatenate(
+        [train_data['count'], test_data['count']], axis=0))
+    train_data['tfidf'] = transformer.transform(train_data['count']).toarray()
+    test_data['tfidf'] = transformer.transform(test_data['count']).toarray()
 
     # load GloVe and make embedding matrix
     glove_dict = load_glove(args.glove)
@@ -57,8 +70,11 @@ def main():
         preprocess_args = {'tag_table': tag_table,
                            'tokenizer': tokenizer,
                            'rand_indices': rand_indices,
-                           'max_len': train_data['x'].shape[1]}
-                           # 'embedding_matrix': embedding_matrix}
+                           'max_len': train_data['x'].shape[1],
+                           'vectorizer': vectorizer,
+                           'transformer': transformer}
+
+        # 'embedding_matrix': embedding_matrix}
         pickle.dump(preprocess_args, f)
 
     # save embedding matrix
@@ -69,7 +85,7 @@ def main():
         data = {'train': train,
                 'valid': valid}
         pickle.dump(data, f)
-            
+
 
 if __name__ == '__main__':
     try:
