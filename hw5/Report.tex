@@ -25,7 +25,7 @@
 \pagestyle{fancy}
 \fancyhf{}
 \rhead{B03902072\ZhFont{江廷睿}}
-\lhead{Machine Learning Homework 4}
+\lhead{Machine Learning Homework 5}
 \rfoot{\thepage / \pageref{LastPage}}
 
 \XeTeXlinebreaklocale "zh"
@@ -42,7 +42,13 @@
 \thispagestyle{fancy}
 
 \section{(1\%)請問softmax適不適合作為本次作業的output layer? 寫出你最後選擇的output layer並說明理由。}
+
+這次作業是多標籤的分類問題，softmax 函數會使得最多只會有一個類別的機率大於 0.5 ，因此較為不適合。為了要模型能對於不只一個標籤預測出大於 0.5 的機率，輸出層應該是使用 sigmoid 函數會比較合理。
+
 \section{(1\%)請設計實驗驗證上述推論}
+
+如果使用助教提供的樣本程式碼， F1 score 在自行切分的驗證資料集上，最高只能達到大約 0.29 。而使用 sigmoid 的話，使用與樣本程式碼類似的架構的話，則可以得到 0.51 的 F1 score。這顯示了在輸出層使用 sigmoid 函數較為合裡。
+
 \section{(1\%)請試著分析tags的分布情況(數量)}
 
 \begin{tabular}{| l | c | r |}
@@ -92,5 +98,6 @@
 
 \section{(1\%)試比較bag of word和RNN何者在本次作業中效果較好。}
 
+對於同一組訓練資料與驗證資料，使用 TfIdf 的方法處理 Bag of Word 後，再使用線性支撐向量機對每個類別分別做二元分類，最高可以在驗證資料上得到 0.52 的 F1 score ，而使用 RNN 也可以得到 0.52 的 F1 score ，因此我認為兩者效果差不多。
 
 \end{document}
