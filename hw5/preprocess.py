@@ -47,12 +47,13 @@ def main():
     encode_text(train_data, tokenizer)
 
     # preprocess text
-    vectorizer = CountVectorizer(min_df=1, stop_words='english')
+    vectorizer = CountVectorizer(min_df=1, ngram_range=(1, 3),
+                                 stop_words='english', max_features=40000)
     vectorizer.fit(train_data['text'] + test_data['text'])
     train_data['count'] = vectorizer.transform(train_data['text']).toarray()
     test_data['count'] = vectorizer.transform(test_data['text']).toarray()
 
-    transformer = TfidfTransformer(smooth_idf=False)
+    transformer = TfidfTransformer(sublinear_tf=True)
     transformer.fit(np.concatenate(
         [train_data['count'], test_data['count']], axis=0))
     train_data['tfidf'] = transformer.transform(train_data['count']).toarray()

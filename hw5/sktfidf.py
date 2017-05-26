@@ -40,7 +40,7 @@ def main():
         rand_indices = preprocess_args['rand_indices']
         vectorizer = preprocess_args['vectorizer']
         transformer = preprocess_args['transformer']
-    
+
     # read data
     train_data = read_train(args.train)
     encode_tags(train_data, tag_table)
@@ -56,11 +56,11 @@ def main():
     # classifiers = [RandomForestClassifier(n_estimators=1000, n_jobs=-1) for i in range(train['y'].shape[1])]
     for i in range(train['y'].shape[1]):
         classifiers[i].fit(train['x'], train['y'][:, i])
-        # y_ = classifiers[i].predict(valid['x'])
-        # y_train = classifiers[i].predict(train['x'])
-        # print('label %d, train f1 = %f valid f1 = %f'
-        #       % (i, f1_score(train['y'][:, i], y_train),
-        #          f1_score(valid['y'][:, i], y_)))
+        y_ = classifiers[i].predict(valid['x'])
+        y_train = classifiers[i].predict(train['x'])
+        print('label %d, train f1 = %f valid f1 = %f'
+              % (i, f1_score(train['y'][:, i], y_train),
+                 f1_score(valid['y'][:, i], y_)))
 
     train['y_'] = np.zeros(train['y'].shape)
     valid['y_'] = np.zeros(valid['y'].shape)
