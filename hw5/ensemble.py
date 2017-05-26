@@ -49,7 +49,7 @@ def main():
     train, valid, _ = split_valid(train_data, 0.1, rand_indices)
 
     tfidf_model_files = ['svm-0002.pickle', 'svm-0003.pickle', 'svm-00025.pickle']
-    tfidf_model_files = []
+    # tfidf_model_files = []
     tfidf_models = []
     for filename in tfidf_model_files:
         with open(filename, 'rb') as f:
@@ -76,7 +76,8 @@ def main():
     test['y_'] = test_y
 
     rnn_models = ['1GRU-SIG-2NN-52.h5', '1GRU-SIG-3NN-TA-52.h5',
-                  '2GRU-SIG-52.h5']
+                  '2GRU-SIG-52.h5', 
+                  '1GRU-SIG-2NN-51.h5']
     # rnn_models = []
     for model in rnn_models:
         classifier = TextClassifier()
