@@ -19,6 +19,8 @@ def main():
                         help='learning rate')
     parser.add_argument('--batch_size', type=int, default=128,
                         help='batch size')
+    parser.add_argument('--d_latent', type=int, default=50,
+                        help='dimension of latent feature')
     args = parser.parse_args()
 
     train_data = read_train(args.train)
@@ -32,7 +34,7 @@ def main():
     # start training
     mf = MF(n_iters=args.n_iters,
             lr=args.lr, batch_size=args.batch_size,
-            filename=args.model)
+            filename=args.model, d_latent=args.d_latent)
     mf.fit(train['x'], train['y'], valid)
 
 

@@ -77,13 +77,13 @@ class MF:
 
         earlystopping = EarlyStopping(monitor='val_mean_squared_error',
                                       patience=15,
-                                      mode='max')
+                                      mode='min')
 
         checkpoint = ModelCheckpoint(filepath=self.filename,
                                      verbose=1,
                                      save_best_only=True,
                                      monitor='val_mean_squared_error',
-                                     mode='max')
+                                     mode='min')
 
         self.model.fit(X, y,
                        epochs=self.n_iters,
