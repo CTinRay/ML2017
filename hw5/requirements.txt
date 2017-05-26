@@ -3,4 +3,5 @@ scipy
 numpy
 keras
 pandas
-
+tensorflow
+h5py
