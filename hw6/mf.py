@@ -22,26 +22,27 @@ class MF:
     def _build_model(self, dim1, dim2, d_latent):
         print("dim1 = %d, dim2 = %d" % (dim1, dim2))
         inputs = Input(shape=(2,))
+
+        # bias terms
+        b1 = Lambda(lambda x: x[:, 0:1])(inputs)
+        b1 = Embedding(dim1, 1, input_length=1)(b1)
+        b1 = Flatten()(b1)
+
+        b2 = Lambda(lambda x: x[:, 0:1])(inputs)
+        b2 = Embedding(dim1, 1, input_length=1)(b2)
+        b2 = Flatten()(b2)
+
         p = Lambda(lambda x: x[:, 0:1])(inputs)
         p = Embedding(dim1, d_latent, input_length=1)(p)
         p = Flatten()(p)
-        
+
         q = Lambda(lambda x: x[:, 1:2])(inputs)
         q = Embedding(dim2, d_latent, input_length=1)(q)
         q = Flatten()(q)
-        pred = layers.Dot(axes=1)([p, q])
-        self.model = Model(input=inputs, output=pred)
+        x = layers.Dot(axes=1)([p, q])
+        x = layers.Add()([x, b1, b2])
+        self.model = Model(input=inputs, output=x)
 
-        # P = Sequential()
-        # P.add(Embedding(dim1, d_latent, input_length=1))
-        # P.add(Flatten())
-
-        # Q = Sequential()
-        # Q.add(Embedding(dim1, d_latent, input_length=1))
-        # Q.add(Flatten())
-
-        # self.model = Sequential()
-        # self.model.add(Merge([P, Q], mode='dot', dot_axes=-1))
         self.model.summary()
 
         optimizer = Adam(lr=self.lr, decay=self.lr_decay)

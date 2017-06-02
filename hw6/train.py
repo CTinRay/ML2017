@@ -31,13 +31,20 @@ def main():
 
     train, valid = split_valid(train_data, args.valid_ratio)
 
+    mean = np.mean(train['y'])
+    std = np.std(train['y'])
+
+    train['y'] = (train['y'] - mean) / std
+    valid['y'] = (valid['y'] - mean) / std
+
     # start training
     mf = MF(n_iters=args.n_iters,
             lr=args.lr, batch_size=args.batch_size,
             filename=args.model, d_latent=args.d_latent)
     mf.fit(train['x'], train['y'], valid)
 
-
+    print('std = %f' % std)
+    
 if __name__ == '__main__':
     try:
         main()
