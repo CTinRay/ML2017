@@ -1,0 +1,75 @@
+\documentclass[fleqn,a4paper,12pt]{article}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+
+
+\title{Machine Learning Homework 6}
+\date{}
+
+\setcounter{section}{0}
+
+\usepackage{listings}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+
+\usepackage{mathspec}
+\setmainfont{Noto Serif CJK TC}
+% \setmathsfont(Digits,Latin,Greek)[Numbers={Lining,Proportional}]{DejaVu Math TeX Gyre}
+\newfontfamily\ZhFont{Noto Serif CJK TC}
+\newfontfamily\SmallFont[Scale=0.8]{Droid Sans}
+% \newfontfamily\SmallSmallFont[Scale=0.7]{Noto Serif CJK}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{B03902072\ZhFont{江廷睿}}
+\lhead{Machine Learning Homework 6}
+\rfoot{\thepage / \pageref{LastPage}}
+
+\XeTeXlinebreaklocale "zh"
+\XeTeXlinebreakskip = 0pt plus 1pt
+\usepackage{parskip}
+
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+
+\begin{document}
+% \maketitle
+\thispagestyle{fancy}
+
+\section{(1\%)請比較有無normalize(rating)的差別。並說明如何normalize.}
+
+如果沒有做 normalization，在 valid 上的 RMSE 為 0.862039792 ，有做 normalization 則為 0.862039792。結論是有沒有做 normalization 沒有太大的差異。normalization 的方式為算出所有評價的平均值與標準差，再將所有評價都減去平均值並除以標準差。
+
+\section{(1\%)比較不同的latent dimension的結果。}
+
+\begin{tabular}[c]{| l | c | r |}
+  \hline
+  維度 & RMSE \\ \hline
+  100 & 0.890224 \\ \hline
+  75 & 0.862039 \\ \hline
+  50 & 0.877154 \\ \hline
+\end{tabular}
+
+\section{(1\%)比較有無bias的結果}
+
+有加入 bias 的 RMSE 是 0.862039 ，沒加 RMSE 則是 bias 0.885437。顯示加入 bias 的確能增進準確度。
+
+\section{(1\%)請試著用DNN來解決這個問題，並且說明實做的方法(方法不限)。並比較MF和NN的結果，討論結果的差異。}
+
+如果訓練時把電影跟使用者的 embedding matrix 接起來，而不是內積，並在後面接上三層的完全連接層，最後輸出層則是一個神經元，則此架構可以到 RMSE 0.877838。相較於加入 bias 後的矩陣分解，效果比較差，但又比不加 bias 的矩陣分解好。
+
+\section{(1\%)請試著將movie的embedding用tsne降維後，將movie category當作label來作圖。}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{tsne.png}
+\label{fig:p1.1}
+\end{figure}
+
+
+\end{document}
