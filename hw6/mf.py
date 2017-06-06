@@ -36,9 +36,28 @@ class MF:
         p = Embedding(dim1, d_latent, input_length=1)(p)
         p = Flatten()(p)
 
+        if self.user_features is not None:
+            user = Lambda(lambda x: x[:, 0:1])(inputs)
+            user = Embedding(dim1, self.user_features.shape[1],
+                             weights=[self.user_features],
+                             input_length=1, trainable=False)(user)
+            user = Flatten()(user)
+            p = Concatenate()([p, user])
+            p = Dense(d_latent + 1)(p)
+
         q = Lambda(lambda x: x[:, 1:2])(inputs)
         q = Embedding(dim2, d_latent, input_length=1)(q)
         q = Flatten()(q)
+
+        if self.movie_features is not None:
+            movie = Lambda(lambda x: x[:, 1:2])(inputs)
+            movie = Embedding(dim2, self.movie_features.shape[1],
+                              weights=[self.movie_features],
+                              input_length=1, trainable=False)(movie)
+            movie = Flatten()(movie)
+            q = Concatenate()([q, movie])
+            q = Dense(d_latent + 1)(q)
+
         x = layers.Dot(axes=1)([p, q])
         x = layers.Add()([x, b1, b2])
         self.model = Model(input=inputs, output=x)
@@ -53,7 +72,8 @@ class MF:
 
     def __init__(self, n_iters=100, lr=0.001,
                  lr_decay=0, batch_size=128,
-                 filename=None, ram=0.2, d_latent=50):
+                 filename=None, ram=0.2, d_latent=50,
+                 user_features=None, movie_features=None):
         self.n_iters = n_iters
         self.lr = lr
         self.lr_decay = lr_decay
@@ -61,6 +81,8 @@ class MF:
         self.model = None
         self.filename = filename
         self.d_latent = d_latent
+        self.user_features = user_features
+        self.movie_features = movie_features
 
         # set GPU memory limit
         config = tf.ConfigProto()
