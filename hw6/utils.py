@@ -12,14 +12,14 @@ def read_train(filename):
 def read_test(filename):
     df = pd.read_csv(filename, header=0)
     df = df.as_matrix()
-    return {'x': df[:, [1, 2]]}
+    return df[:, 0], {'x': df[:, [1, 2]]}
 
 
-def write_predict(filename, predict):
+def write_predict(filename, inds, predict):
     with open(filename, 'w') as f:
         f.write('TestDataID,Rating\n')
         for i in range(predict.shape[0]):
-            f.write('%d,%f\n' % (i + 1, predict[i]))
+            f.write('%d,%f\n' % (inds[i], predict[i]))
 
 
 def split_valid(data, valid_ratio, indices=None):

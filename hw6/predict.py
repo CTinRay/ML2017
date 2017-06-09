@@ -13,7 +13,7 @@ def main():
     parser.add_argument('out', type=str, help='out.csv')
     args = parser.parse_args()
 
-    test = read_test(args.test)
+    inds, test = read_test(args.test)
 
     # Fix index offset
     test['x'][:, 0] -= 1
@@ -23,7 +23,7 @@ def main():
     mf = MF()
     mf.load(args.model)
     test['y_'] = mf.predict_raw(test['x'])
-    write_predict(args.out, test['y_'])
+    write_predict(args.out, inds, test['y_'])
 
 
 if __name__ == '__main__':
